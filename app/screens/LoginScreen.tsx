@@ -11,13 +11,15 @@ import {
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from "../../hooks/AuthProvider";
 
 // URL del backend Django su ngrok
 const BASE_URL =
-    "https://34ed-2a01-e11-9002-1af0-89fe-ad2-8cc6-73b1.ngrok-free.app";
+    "https://6ce0435eea8f.ngrok-free.app";
 
 const LoginScreen = () => {
     const navigation = useNavigation<any>();
+    const { login } = useAuth();
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
@@ -25,6 +27,7 @@ const LoginScreen = () => {
 
 
     const handleLogin = async () => {
+        setLoading(true);
         try {
             const response = await fetch(`${BASE_URL}/api/users/token/`, {
                 method: "POST",
@@ -36,9 +39,8 @@ const LoginScreen = () => {
 
             if (response.ok) {
                 console.log("Login success:", data);
-                // Memorizza il token per l'autenticazione futura
+                await login({ access: data.access, refresh: data.refresh });
                 Alert.alert("Login Success", "Welcome back!");
-                navigation.navigate("Homen"); // Naviga alla home dopo il login
             } else {
                 console.error("Login failed:", data);
                 Alert.alert("Login Failed", data.detail || "Invalid credentials");
@@ -81,12 +83,12 @@ const LoginScreen = () => {
                             <Ionicons
                                 name={isPasswordVisible ? "eye-off" : "eye"}
                                 size={24}
-                                color="#6EC1E4"
+                                color="#00a028ff"
                             />
                         </TouchableOpacity>
                     </View>
                     {loading ? (
-                        <ActivityIndicator size="large" color="#007AFF" />
+                        <ActivityIndicator size="large" color="#09650eff" />
                     ) : (
                         <>
                             <TouchableOpacity style={styles.button} onPress={handleLogin}>
@@ -124,7 +126,7 @@ const styles = StyleSheet.create({
         textAlign: 'center',
     },
     appName: {
-        color: '#6EC1E4',
+        color: '#00a028ff',
         fontSize: 36,
         fontWeight: 'bold',
         textAlign: 'center',
@@ -136,9 +138,9 @@ const styles = StyleSheet.create({
     },
     input: {
         height: 45,
-        borderColor: '#6EC1E4',
+        borderColor: '#09650eff',
         borderWidth: 1,
-        marginBottom: 12,
+        marginBottom: 16,
         paddingLeft: 12,
         borderRadius: 10,
         backgroundColor: '#fff',
@@ -148,10 +150,8 @@ const styles = StyleSheet.create({
     passwordContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        borderColor: '#6EC1E4',
-        borderWidth: 1,
         borderRadius: 10,
-        marginBottom: 12,
+        marginBottom: 32,
         paddingLeft: 12,
         paddingRight: 12,
         backgroundColor: '#fff',
@@ -163,13 +163,14 @@ const styles = StyleSheet.create({
         color: '#333',
     },
     button: {
-        backgroundColor: "#007AFF",
+        backgroundColor: "#00a028ff",
         paddingVertical: 12,
         paddingHorizontal: 20,
         borderRadius: 10,
         alignItems: 'center',
         marginVertical: 5,
         width: '100%',
+        marginBottom: 16,
     },
     buttonText: {
         color: "#FFF",
@@ -177,6 +178,6 @@ const styles = StyleSheet.create({
         fontWeight: "bold",
     },
     registerButton: {
-        backgroundColor: '#6EC1E4',
+        backgroundColor: '#09650eff',
     },
 });

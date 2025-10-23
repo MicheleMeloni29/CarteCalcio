@@ -1,16 +1,19 @@
 import { registerRootComponent } from 'expo';
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
+import { View } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from './hooks/AuthProvider';
+import { CreditProvider } from './hooks/CreditProvider';
 import AuthStackNavigator from './app/navigators/AuthStackNavigation';
-import DrawerNavigator from './app/navigators/DrawerNavigator';
+import MainStackNavigator from './app/navigators/MainStackNavigator';
 
 function AppNavigator() {
-    const { user } = useAuth();
+    const { accessToken } = useAuth();
 
     return (
         <NavigationContainer>
-            {user ? <DrawerNavigator /> : <AuthStackNavigator />}
+            {accessToken ? <MainStackNavigator /> : <AuthStackNavigator />}
         </NavigationContainer>
     );
 }
@@ -18,7 +21,11 @@ function AppNavigator() {
 function App() {
     return (
         <AuthProvider>
-            <AppNavigator />
+            <SafeAreaProvider>
+                <CreditProvider>
+                    <AppNavigator />
+                </CreditProvider>
+            </SafeAreaProvider>
         </AuthProvider>
     );
 }

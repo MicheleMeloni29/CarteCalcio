@@ -10,9 +10,9 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { StackScreenProps } from '@react-navigation/stack';
-import type { RootStackParamList } from '../navigators/MainTabNavigator';
+import type { AuthStackParamList } from '../navigators/AuthStackNavigation';
 
-type RegisterScreenProps = StackScreenProps<RootStackParamList, 'Register'>;
+type RegisterScreenProps = StackScreenProps<AuthStackParamList, 'Register'>;
 
 const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
     const [userName, setUserName] = useState('');
@@ -23,8 +23,8 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
     const [errorMessage, setErrorMessage] = useState('');
     const [isPasswordVisible, setIsPasswordVisible] = useState(true);
 
-    const API_URL =
-        "https://34ed-2a01-e11-9002-1af0-89fe-ad2-8cc6-73b1.ngrok-free.app";
+      const API_URL =
+        "https://6ce0435eea8f.ngrok-free.app";
 
     // Email validation
     const isValidEmail = (email: string) => {
@@ -49,6 +49,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
         }
     }, [userName, email, password, confirmPassword]);
 
+    // Handle user registration ( API call and error management )
     const handleRegister = async () => {
         if (!isFormValid) {
             Alert.alert('Errore', 'Assicurati che tutti i campi siano compilati e le password coincidano.');
@@ -124,7 +125,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
                             secureTextEntry={isPasswordVisible}
                         />
                         <TouchableOpacity onPress={() => setIsPasswordVisible(!isPasswordVisible)}>
-                            <Ionicons name={isPasswordVisible ? "eye-off" : "eye"} size={24} color="#6EC1E4" />
+                            <Ionicons name={isPasswordVisible ? "eye-off" : "eye"} size={24} color="#00a028ff" />
                         </TouchableOpacity>
                     </View>
                     <View style={styles.passwordContainer}>
@@ -138,7 +139,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
                             secureTextEntry={isPasswordVisible}
                         />
                         <TouchableOpacity onPress={() => setIsPasswordVisible(!isPasswordVisible)}>
-                            <Ionicons name={isPasswordVisible ? "eye-off" : "eye"} size={24} color="#6EC1E4" />
+                            <Ionicons name={isPasswordVisible ? "eye-off" : "eye"} size={24} color="#00a028ff" />
                         </TouchableOpacity>
                     </View>
 
@@ -186,7 +187,7 @@ const styles = StyleSheet.create({
     },
     input: {
         height: 45,
-        borderColor: '#6EC1E4',
+        borderColor: '#00a028ff',
         borderWidth: 1,
         marginBottom: 12,
         paddingLeft: 12,
@@ -198,7 +199,7 @@ const styles = StyleSheet.create({
     passwordContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        borderColor: '#6EC1E4',
+        borderColor: '#00a028ff',
         borderWidth: 1,
         borderRadius: 10,
         marginBottom: 12,
@@ -226,7 +227,7 @@ const styles = StyleSheet.create({
         width: '100%',
     },
     buttonEnabled: {
-        backgroundColor: "#007AFF",
+        backgroundColor: "#00a028ff",
     },
     buttonDisabled: {
         backgroundColor: "#9999",
