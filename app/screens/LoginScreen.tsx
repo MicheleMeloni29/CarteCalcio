@@ -15,7 +15,7 @@ import { useAuth } from "../../hooks/AuthProvider";
 
 // URL del backend Django su ngrok
 const BASE_URL =
-    "https://6ce0435eea8f.ngrok-free.app";
+    "https://46ee1e42605c.ngrok-free.app";
 
 const LoginScreen = () => {
     const navigation = useNavigation<any>();

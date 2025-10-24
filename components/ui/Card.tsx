@@ -75,7 +75,7 @@ const Card: React.FC<CardProps> = ({
   rarity = 'common', // Default alla rarità "common"
 }) => {
   const sizes = {
-    small: { width: 70, height: 105, fontSize: 2.8, padding: 2.8, borderWidth: 5.6 },
+    small: { width: 80, height: 115, fontSize: 2.8, padding: 2.8, borderWidth: 5.6 },
     medium: { width: 150, height: 225, fontSize: 6, padding: 6, borderWidth: 12 },
     large: { width: 350, height: 525, fontSize: 14, padding: 14, borderWidth: 28 },
   };

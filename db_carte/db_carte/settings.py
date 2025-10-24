@@ -22,13 +22,13 @@ DEBUG = True  # WARNING: Disable this in production!
 ALLOWED_HOSTS = [
     '127.0.0.1',
     'localhost',
-    '6ce0435eea8f.ngrok-free.app',  # Ngrok URL
+    '46ee1e42605c.ngrok-free.app',  # Ngrok URL
 ]
 
 CSRF_TRUSTED_ORIGINS = [
     'https://127.0.0.1',
     'https://localhost',
-    'https://6ce0435eea8f.ngrok-free.app',  # Ngrok URL
+    'https://46ee1e42605c.ngrok-free.app',  # Ngrok URL
 ]
 
 # --------------------------------------------------------------------------------
@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'corsheaders',  # Deve comparire solo una volta
     'users',
     'cards',
+    'quiz',
 ]
 
 # --------------------------------------------------------------------------------

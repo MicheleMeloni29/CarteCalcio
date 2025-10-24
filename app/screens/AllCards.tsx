@@ -1,8 +1,11 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { FlatList, StyleSheet, View, Modal, TouchableOpacity, Text, ScrollView, ImageBackground } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import type { StackNavigationProp } from '@react-navigation/stack';
 import Card from '../../components/ui/Card'; // Componente Card personalizzato
 import TopStatusBar from '../../components/ui/TopStatusBar';
+import type { MainStackParamList } from '../navigators/MainStackNavigator';
 
 // Definizione dell'interfaccia per il tipo di carta 
 interface CardType {
@@ -24,6 +27,7 @@ interface CardType {
 type DropdownKey = 'team' | 'rarity' | 'type';
 
 export default function AllCardsScreen() {
+  const navigation = useNavigation<StackNavigationProp<MainStackParamList, 'AllCards'>>();
   const [cards, setCards] = useState<CardType[]>([]);
   const [selectedCard, setSelectedCard] = useState<CardType | null>(null); // Stato per la carta selezionata
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
@@ -38,7 +42,7 @@ export default function AllCardsScreen() {
 
   const fetchCards = async () => {
     try {
-      const response = await fetch('https://6ce0435eea8f.ngrok-free.app/api/cards/all/');
+      const response = await fetch('https://46ee1e42605c.ngrok-free.app/api/cards/all/');
       console.log('Carte:', response);
       const data = await response.json();
       console.log('Dati dal backend:', JSON.stringify(data, null, 2));
@@ -126,6 +130,14 @@ export default function AllCardsScreen() {
       return true;
     });
   }, [cards, selectedTeam, selectedRarity, selectedType]);
+
+  const handleExit = useCallback(() => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+    } else {
+      navigation.navigate('Home');
+    }
+  }, [navigation]);
 
   const formatRarityLabel = (rarity: CardType['rarityColor']) =>
     rarity.charAt(0).toUpperCase() + rarity.slice(1);
@@ -253,161 +265,175 @@ export default function AllCardsScreen() {
       <View style={styles.container}>
         <TopStatusBar />
         <View style={styles.filtersContainer}>
-        <View style={styles.dropdownRow}>
-          {dropdownDefinitions.map(({ key, label }) => {
-            const isOpen = activeDropdown === key;
-            const hasValue = hasSelectedValue(key);
-            const options = dropdownOptions[key] ?? [];
-
-            return (
-              <View
-                key={key}
-                style={[
-                  styles.dropdownWrapper,
-                  isOpen && styles.dropdownWrapperActive,
-                ]}
-              >
-                <Text style={styles.dropdownLabel}>{label}</Text>
-                <TouchableOpacity
-                  style={[
-                    styles.dropdownTrigger,
-                    (isOpen || hasValue) && styles.dropdownTriggerActive,
-                  ]}
-                  activeOpacity={0.85}
-                  onPress={() => toggleDropdown(key)}
-                >
-                  <Text style={styles.dropdownValue} numberOfLines={1}>
-                    {getSelectedLabel(key)}
-                  </Text>
-                  <Ionicons
-                    name={isOpen ? 'chevron-up' : 'chevron-down'}
-                    size={18}
-                    color={isOpen ? '#00751c' : '#1f2933'}
-                  />
-                </TouchableOpacity>
-
-                {isOpen && (
-                  <View style={styles.dropdownMenu}>
-                    <ScrollView
-                      nestedScrollEnabled
-                      showsVerticalScrollIndicator={false}
-                    >
-                      <TouchableOpacity
-                        style={[
-                          styles.dropdownOption,
-                          isOptionSelected(key, null) &&
-                            styles.dropdownOptionActive,
-                          options.length === 0 && styles.dropdownOptionLast,
-                        ]}
-                        onPress={() => handleDropdownSelect(key, null)}
-                      >
-                        <Text
-                          style={[
-                            styles.dropdownOptionText,
-                            isOptionSelected(key, null) &&
-                              styles.dropdownOptionTextActive,
-                          ]}
-                        >
-                          Tutte
-                        </Text>
-                        {isOptionSelected(key, null) && (
-                          <Ionicons
-                            name="checkmark"
-                            size={16}
-                            color="#00751c"
-                          />
-                        )}
-                      </TouchableOpacity>
-
-                      {options.map((option, index) => {
-                        const isSelected = isOptionSelected(key, option);
-                        const isLast = index === options.length - 1;
-
-                        return (
-                          <TouchableOpacity
-                            key={`${key}-${option}`}
-                            style={[
-                              styles.dropdownOption,
-                              isSelected && styles.dropdownOptionActive,
-                              isLast && styles.dropdownOptionLast,
-                            ]}
-                            onPress={() => handleDropdownSelect(key, option)}
-                          >
-                            <Text
-                              style={[
-                                styles.dropdownOptionText,
-                                isSelected && styles.dropdownOptionTextActive,
-                              ]}
-                            >
-                              {formatOptionLabel(key, option)}
-                            </Text>
-                            {isSelected && (
-                              <Ionicons
-                                name="checkmark"
-                                size={16}
-                                color="#00751c"
-                              />
-                            )}
-                          </TouchableOpacity>
-                        );
-                      })}
-                    </ScrollView>
-                  </View>
-                )}
-              </View>
-            );
-          })}
-        </View>
-      </View>
-      <FlatList
-        data={filteredCards}
-        keyExtractor={(item, index) => `${item.type}-${item.id}-${index}`}
-        renderItem={renderCard}
-        numColumns={5}
-        contentContainerStyle={[
-          styles.grid,
-          filteredCards.length === 0 && styles.gridEmpty,
-        ]}
-        onScrollBeginDrag={() => {
-          if (activeDropdown) {
-            setActiveDropdown(null);
-          }
-        }}
-        ListEmptyComponent={
-          <Text style={styles.emptyMessage}>
-            Nessuna carta trovata con i filtri selezionati.
-          </Text>
-        }
-      />
-
-      {selectedCard && (
-        <Modal transparent={true} animationType="fade" visible={!!selectedCard}>
-          <View style={styles.modalContainer}>
-            <Card
-              size="large"
-              type={selectedCard.type}
-              name={selectedCard.name}
-              team={selectedCard.team}
-              attack={selectedCard.attack}
-              defense={selectedCard.defense}
-              abilities={selectedCard.abilities}
-              effect={selectedCard.effect}
-              duration={selectedCard.duration}
-              attackBonus={selectedCard.attackBonus}
-              defenseBonus={selectedCard.defenseBonus}
-              image={{ uri: selectedCard.image_url }}
-              rarity={selectedCard.rarityColor} // Passa il colore della rarità come prop "rarity"
-            />
+          <View style={styles.filtersRow}>
             <TouchableOpacity
-              style={styles.closeButton}
-              onPress={() => setSelectedCard(null)}
+              style={styles.backButton}
+              onPress={handleExit}
+              activeOpacity={0.85}
             >
-              <Text style={styles.closeButtonText}>Chiudi</Text>
+              <Ionicons
+                name="arrow-back"
+                size={26}
+                color="#00a028ff"
+                style={{ marginRight: 6 }}
+              />
             </TouchableOpacity>
+            <View style={styles.dropdownRow}>
+            {dropdownDefinitions.map(({ key, label }) => {
+              const isOpen = activeDropdown === key;
+              const hasValue = hasSelectedValue(key);
+              const options = dropdownOptions[key] ?? [];
+
+              return (
+                <View
+                  key={key}
+                  style={[
+                    styles.dropdownWrapper,
+                    isOpen && styles.dropdownWrapperActive,
+                  ]}
+                >
+                  <TouchableOpacity
+                    style={[
+                      styles.dropdownTrigger,
+                      (isOpen || hasValue) && styles.dropdownTriggerActive,
+                    ]}
+                    activeOpacity={0.85}
+                    onPress={() => toggleDropdown(key)}
+                  >
+                    <Text style={styles.dropdownLabel}>{label}</Text>
+                    <Text style={styles.dropdownValue} numberOfLines={1}>
+                      {getSelectedLabel(key)}
+                    </Text>
+                    <Ionicons
+                      name={isOpen ? 'chevron-up' : 'chevron-down'}
+                      size={16}
+                      color={isOpen ? '#00751c' : '#1f2933'}
+                    />
+                  </TouchableOpacity>
+
+                  {isOpen && (
+                    <View style={styles.dropdownMenu}>
+                      <ScrollView
+                        nestedScrollEnabled
+                        showsVerticalScrollIndicator={false}
+                      >
+                        <TouchableOpacity
+                          style={[
+                            styles.dropdownOption,
+                            isOptionSelected(key, null) &&
+                            styles.dropdownOptionActive,
+                            options.length === 0 && styles.dropdownOptionLast,
+                          ]}
+                          onPress={() => handleDropdownSelect(key, null)}
+                        >
+                          <Text
+                            style={[
+                              styles.dropdownOptionText,
+                              isOptionSelected(key, null) &&
+                              styles.dropdownOptionTextActive,
+                            ]}
+                          >
+                            Tutte
+                          </Text>
+                          {isOptionSelected(key, null) && (
+                            <Ionicons
+                              name="checkmark"
+                              size={16}
+                              color="#00ff3cff"
+                            />
+                          )}
+                        </TouchableOpacity>
+
+                        {options.map((option, index) => {
+                          const isSelected = isOptionSelected(key, option);
+                          const isLast = index === options.length - 1;
+
+                          return (
+                            <TouchableOpacity
+                              key={`${key}-${option}`}
+                              style={[
+                                styles.dropdownOption,
+                                isSelected && styles.dropdownOptionActive,
+                                isLast && styles.dropdownOptionLast,
+                              ]}
+                              onPress={() => handleDropdownSelect(key, option)}
+                            >
+                              <Text
+                                style={[
+                                  styles.dropdownOptionText,
+                                  isSelected && styles.dropdownOptionTextActive,
+                                ]}
+                              >
+                                {formatOptionLabel(key, option)}
+                              </Text>
+                              {isSelected && (
+                                <Ionicons
+                                  name="checkmark"
+                                  size={16}
+                                  color="#00751c"
+                                />
+                              )}
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </ScrollView>
+                    </View>
+                  )}
+                </View>
+              );
+            })}
+            </View>
           </View>
-        </Modal>
-      )}
         </View>
+        <FlatList
+          data={filteredCards}
+          keyExtractor={(item, index) => `${item.type}-${item.id}-${index}`}
+          renderItem={renderCard}
+          numColumns={4}
+          contentContainerStyle={[
+            styles.grid,
+            filteredCards.length === 0 && styles.gridEmpty,
+          ]}
+          onScrollBeginDrag={() => {
+            if (activeDropdown) {
+              setActiveDropdown(null);
+            }
+          }}
+          ListEmptyComponent={
+            <Text style={styles.emptyMessage}>
+              Nessuna carta trovata con i filtri selezionati.
+            </Text>
+          }
+        />
+
+        {selectedCard && (
+          <Modal transparent={true} animationType="fade" visible={!!selectedCard}>
+            <View style={styles.modalContainer}>
+              <Card
+                size="large"
+                type={selectedCard.type}
+                name={selectedCard.name}
+                team={selectedCard.team}
+                attack={selectedCard.attack}
+                defense={selectedCard.defense}
+                abilities={selectedCard.abilities}
+                effect={selectedCard.effect}
+                duration={selectedCard.duration}
+                attackBonus={selectedCard.attackBonus}
+                defenseBonus={selectedCard.defenseBonus}
+                image={{ uri: selectedCard.image_url }}
+                rarity={selectedCard.rarityColor} // Passa il colore della rarità come prop "rarity"
+              />
+              <TouchableOpacity
+                style={styles.closeButton}
+                onPress={() => setSelectedCard(null)}
+              >
+                <Text style={styles.closeButtonText}>Chiudi</Text>
+              </TouchableOpacity>
+            </View>
+          </Modal>
+        )}
+      </View>
     </ImageBackground>
   );
 }
@@ -417,38 +443,68 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   backgroundImage: {
-    opacity: 0.65,
   },
   container: {
     flex: 1,
     backgroundColor: 'rgba(14, 12, 15, 0.25)',
-    paddingBottom: 12,
+    paddingBottom: 24,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 24,
+  },
+  exitLabel: {
+    color: '#00a028ff',
+    fontSize: 16,
+    fontWeight: '700',
   },
   filtersContainer: {
     paddingVertical: 16,
-    paddingHorizontal: 0,
     zIndex: 10,
-    marginBottom: 8,
+    marginBottom: 12,
+  },
+  filtersRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    columnGap: 12,
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(15, 15, 19, 0.65)',
+    borderColor: 'rgba(0, 160, 40, 1)',
+    borderWidth: 2,
+    borderRadius: 14,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    minHeight: 40,
+  },
+  backLabel: {
+    textAlign: 'center',
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#00a028ff',
   },
   dropdownRow: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
-    columnGap: 16,
+    alignItems: 'center',
+    columnGap: 12,
+    flex: 1,
   },
   dropdownWrapper: {
     flex: 1,
     minWidth: 0,
     position: 'relative',
+    borderRadius: 14,
+    borderColor: 'rgba(0, 160, 40, 1)',
+    borderWidth: 2,
   },
   dropdownWrapperActive: {
     zIndex: 25,
-  },
-  dropdownLabel: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#064209ff',
-    marginBottom: 6,
-    textAlign: 'center',
   },
   dropdownTrigger: {
     flexDirection: 'row',
@@ -456,13 +512,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#d0d5dd',
     borderRadius: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    minHeight: 40,
     backgroundColor: '#fff',
   },
   dropdownTriggerActive: {
     borderColor: '#00a028ff',
-    backgroundColor: 'rgba(0, 160, 40, 0.12)',
+    backgroundColor: 'rgba(168, 176, 170, 0.19)',
+  },
+  dropdownLabel: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#00a028ff',
+    marginBottom: 2,
   },
   dropdownValue: {
     flex: 1,
@@ -474,8 +537,8 @@ const styles = StyleSheet.create({
   dropdownMenu: {
     position: 'absolute',
     top: '100%',
-    left: 0,
-    right: 0,
+    left: -10,
+    right: -10,
     marginTop: 6,
     backgroundColor: '#fff',
     borderRadius: 12,
@@ -517,7 +580,8 @@ const styles = StyleSheet.create({
     color: '#00751c',
   },
   grid: {
-    padding: 10,
+    paddingHorizontal: 22,
+    paddingVertical: 22,
     alignItems: 'center',
   },
   list: {

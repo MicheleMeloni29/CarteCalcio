@@ -9,7 +9,7 @@ import React, {
 
 import { useAuth } from './AuthProvider';
 
-const BASE_URL = 'https://6ce0435eea8f.ngrok-free.app';
+const BASE_URL = 'https://46ee1e42605c.ngrok-free.app';
 
 type CreditContextType = {
   credits: number | null;
@@ -22,27 +22,53 @@ type CreditContextType = {
 const CreditContext = createContext<CreditContextType | undefined>(undefined);
 
 export const CreditProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { accessToken } = useAuth();
+  const { accessToken, refreshAccessToken } = useAuth();
   const [credits, setCredits] = useState<number | null>(null);
   const [username, setUsername] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
 
-  const refreshCredits = useCallback(async () => {
-    if (!accessToken) {
-      setCredits(null);
-      setUsername(null);
-      setLoading(false);
-      return;
-    }
+  const callWithAuth = useCallback(
+    async (request: (token: string) => Promise<Response>) => {
+      const attempt = async (token: string | null, allowRefresh: boolean): Promise<Response> => {
+        if (!token) {
+          if (!allowRefresh) {
+            throw new Error('Missing access token');
+          }
+          const refreshed = await refreshAccessToken();
+          if (!refreshed) {
+            throw new Error('Missing access token');
+          }
+          return attempt(refreshed, false);
+        }
 
+        const response = await request(token);
+        if (response.status === 401 && allowRefresh) {
+          const refreshed = await refreshAccessToken();
+          if (!refreshed) {
+            throw new Error('Missing access token');
+          }
+          return attempt(refreshed, false);
+        }
+
+        return response;
+      };
+
+      return attempt(accessToken, true);
+    },
+    [accessToken, refreshAccessToken],
+  );
+
+  const refreshCredits = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${BASE_URL}/api/users/me/credits/`, {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
+      const response = await callWithAuth(token =>
+        fetch(`${BASE_URL}/api/users/me/credits/`, {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }),
+      );
 
       if (!response.ok) {
         throw new Error(`Failed to fetch credits (${response.status})`);
@@ -53,10 +79,14 @@ export const CreditProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setUsername(typeof data.username === 'string' ? data.username : null);
     } catch (error) {
       console.error('Unable to load credits', error);
+      if ((error as Error).message === 'Missing access token') {
+        setCredits(null);
+        setUsername(null);
+      }
     } finally {
       setLoading(false);
     }
-  }, [accessToken]);
+  }, [callWithAuth]);
 
   useEffect(() => {
     refreshCredits();
@@ -64,10 +94,6 @@ export const CreditProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const adjustCredits = useCallback(
     async (delta: number) => {
-      if (!accessToken) {
-        throw new Error('Missing access token');
-      }
-
       if (!Number.isFinite(delta) || Math.trunc(delta) !== delta) {
         throw new Error('Delta must be an integer');
       }
@@ -77,14 +103,16 @@ export const CreditProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setCredits(prev => (prev ?? 0) + delta);
 
       try {
-        const response = await fetch(`${BASE_URL}/api/users/me/credits/`, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${accessToken}`,
-          },
-          body: JSON.stringify({ delta }),
-        });
+        const response = await callWithAuth(token =>
+          fetch(`${BASE_URL}/api/users/me/credits/`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ delta }),
+          }),
+        );
 
         if (!response.ok) {
           throw new Error(`Failed to update credits (${response.status})`);
@@ -100,7 +128,7 @@ export const CreditProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         throw error;
       }
     },
-    [accessToken, credits, username],
+    [callWithAuth, credits, username],
   );
 
   const value = useMemo(

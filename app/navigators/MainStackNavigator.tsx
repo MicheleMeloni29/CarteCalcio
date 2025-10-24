@@ -6,13 +6,26 @@ import AllCardsScreen from '../screens/AllCards';
 import ShopScreen from '../screens/ShopScreen';
 import EarnScreen from '../screens/EarnScreen';
 import SettingsScreen from '../screens/SettingsScreen';
+import QuizPlayScreen from '../screens/QuizPlayScreen';
+
+export type QuizProgressUpdate = {
+    slug: string;
+    answered: number;
+    total: number;
+};
 
 export type MainStackParamList = {
     Home: undefined;
     AllCards: undefined;
     Shop: undefined;
-    Earn: undefined;
+    Earn: { progressUpdate?: QuizProgressUpdate } | undefined;
     Settings: undefined;
+    QuizPlay: {
+        themeSlug: string;
+        themeName: string;
+        totalQuestions: number;
+        initialAnswered?: number;
+    };
 };
 
 const Stack = createStackNavigator<MainStackParamList>();
@@ -30,6 +43,7 @@ const MainStackNavigator: React.FC = () => (
         <Stack.Screen name="Shop" component={ShopScreen} />
         <Stack.Screen name="Earn" component={EarnScreen} />
         <Stack.Screen name="Settings" component={SettingsScreen} />
+        <Stack.Screen name="QuizPlay" component={QuizPlayScreen} />
     </Stack.Navigator>
 );
 

@@ -1,89 +1,222 @@
-import React, { useMemo, useState } from 'react';
-import { Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+
+import { useNavigation, useRoute } from '@react-navigation/native';
+import type { RouteProp } from '@react-navigation/native';
+import type { StackNavigationProp } from '@react-navigation/stack';
+import { Ionicons } from '@expo/vector-icons';
 
 import { useCredits } from '../../hooks/CreditProvider';
 import TopStatusBar from '../../components/ui/TopStatusBar';
+import type {
+  MainStackParamList,
+  QuizProgressUpdate,
+} from '../navigators/MainStackNavigator';
 
-type Mission = {
-  id: string;
-  title: string;
-  description: string;
-  reward: number;
+const BASE_URL = 'https://46ee1e42605c.ngrok-free.app';
+
+type QuizTheme = {
+  id: number;
+  name: string;
+  slug: string;
+  question_count: number;
 };
 
-const DAILY_MISSIONS: Mission[] = [
-  {
-    id: 'daily-login',
-    title: 'Bonus accesso giornaliero',
-    description: 'Accedi ogni giorno per ricevere un piccolo extra.',
-    reward: 50,
-  },
-  {
-    id: 'share-friend',
-    title: 'Condividi con un amico',
-    description: 'Invita un amico a registrarsi alla piattaforma.',
-    reward: 120,
-  },
-  {
-    id: 'first-win',
-    title: 'Prima vittoria del giorno',
-    description: 'Vinci una partita per ottenere il bonus.',
-    reward: 200,
-  },
-];
+const SECTION_COMPLETION_BONUS = 200;
 
 const EarnScreen: React.FC = () => {
-  const { credits, adjustCredits } = useCredits();
-  const [claimed, setClaimed] = useState<Record<string, boolean>>({});
-  const [processing, setProcessing] = useState<string | null>(null);
+  const { adjustCredits } = useCredits();
+  const navigation = useNavigation<
+    StackNavigationProp<MainStackParamList, 'Earn'>
+  >();
+  const route = useRoute<RouteProp<MainStackParamList, 'Earn'>>();
+  const [themes, setThemes] = useState<QuizTheme[]>([]);
+  const [loadingThemes, setLoadingThemes] = useState<boolean>(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [progress, setProgress] = useState<Record<string, number>>({});
+  const [claimedThemes, setClaimedThemes] = useState<Record<string, boolean>>({});
+  const [redeemingTheme, setRedeemingTheme] = useState<string | null>(null);
+  const lastProgressKeyRef = useRef<string | null>(null);
 
-  const availableCredits = credits ?? 0;
+  const orderedThemes = useMemo(
+    () => [...themes].sort((a, b) => a.name.localeCompare(b.name)),
+    [themes],
+  );
 
-  const orderedMissions = useMemo(
-    () => [...DAILY_MISSIONS].sort((a, b) => a.reward - b.reward),
+  const ensureProgressShape = useCallback((loadedThemes: QuizTheme[]) => {
+    setProgress(prev => {
+      const next = { ...prev };
+      loadedThemes.forEach(theme => {
+        if (next[theme.slug] === undefined) {
+          next[theme.slug] = 0;
+        }
+      });
+      return next;
+    });
+    setClaimedThemes(prev => {
+      const next = { ...prev };
+      loadedThemes.forEach(theme => {
+        if (next[theme.slug] === undefined) {
+          next[theme.slug] = false;
+        }
+      });
+      return next;
+    });
+  }, []);
+
+  const fetchThemes = useCallback(async () => {
+    setLoadingThemes(true);
+    setFetchError(null);
+    try {
+      const response = await fetch(`${BASE_URL}/api/quiz/themes/`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch quiz themes (${response.status})`);
+      }
+      const data = await response.json();
+      const loadedThemes: QuizTheme[] = Array.isArray(data?.themes) ? data.themes : [];
+      setThemes(loadedThemes);
+      ensureProgressShape(loadedThemes);
+    } catch (error) {
+      console.error('Unable to load quiz themes', error);
+      setFetchError('Impossibile caricare i quiz. Riprova piu tardi.');
+      setThemes([]);
+    } finally {
+      setLoadingThemes(false);
+    }
+  }, [ensureProgressShape]);
+
+  useEffect(() => {
+    fetchThemes();
+  }, [fetchThemes]);
+
+  const applyProgressUpdate = useCallback(
+    (update: QuizProgressUpdate) => {
+      setProgress(prev => ({
+        ...prev,
+        [update.slug]: Math.min(update.total, update.answered),
+      }));
+    },
     [],
   );
 
-  const handleClaim = async (mission: Mission) => {
-    if (processing || claimed[mission.id]) {
+  useEffect(() => {
+    const update = route.params?.progressUpdate;
+    if (!update) {
       return;
     }
-
-    setProcessing(mission.id);
-    try {
-      await adjustCredits(mission.reward);
-      setClaimed(prev => ({ ...prev, [mission.id]: true }));
-      Alert.alert('Ricompensa riscossa', `Hai ottenuto ${mission.reward} crediti!`);
-    } catch (error) {
-      Alert.alert('Errore', 'Non è stato possibile assegnare la ricompensa. Riprova più tardi.');
-    } finally {
-      setProcessing(null);
+    const updateKey = `${update.slug}:${update.answered}:${update.total}`;
+    if (lastProgressKeyRef.current === updateKey) {
+      return;
     }
-  };
+    lastProgressKeyRef.current = updateKey;
+    applyProgressUpdate(update);
+  }, [applyProgressUpdate, route.params?.progressUpdate]);
 
-  const renderMission = ({ item }: { item: Mission }) => {
-    const isClaimed = claimed[item.id];
-    const disabled = processing !== null && processing !== item.id;
+  const handleStartTheme = useCallback(
+    (theme: QuizTheme) => {
+      navigation.navigate('QuizPlay', {
+        themeSlug: theme.slug,
+        themeName: theme.name,
+        totalQuestions: theme.question_count,
+        initialAnswered: progress[theme.slug] ?? 0,
+      });
+    },
+    [navigation, progress],
+  );
+
+  const handleExit = useCallback(() => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+    } else {
+      navigation.navigate('Home');
+    }
+  }, [navigation]);
+
+  const handleRedeemTheme = useCallback(
+    async (theme: QuizTheme) => {
+      const alreadyClaimed = claimedThemes[theme.slug];
+      if (alreadyClaimed || redeemingTheme) {
+        return;
+      }
+
+      setRedeemingTheme(theme.slug);
+
+      try {
+        await adjustCredits(SECTION_COMPLETION_BONUS);
+        setClaimedThemes(prev => ({ ...prev, [theme.slug]: true }));
+        Alert.alert(
+          'Bonus riscattato',
+          `Hai ottenuto ${SECTION_COMPLETION_BONUS} crediti extra per aver completato ${theme.name}.`,
+        );
+      } catch (error) {
+        Alert.alert(
+          'Errore',
+          'Non e stato possibile erogare il bonus. Controlla la connessione e riprova.',
+        );
+      } finally {
+        setRedeemingTheme(null);
+      }
+    },
+    [adjustCredits, claimedThemes, redeemingTheme],
+  );
+
+  const renderTheme = ({ item }: { item: QuizTheme }) => {
+    const answered = progress[item.slug] ?? 0;
+    const total = item.question_count;
+    const isCompleted = total > 0 && answered >= total;
+    const isClaimed = claimedThemes[item.slug];
+    const isRedeeming = redeemingTheme === item.slug;
+
+    let buttonLabel = 'START';
+    if (isCompleted) {
+      buttonLabel = isClaimed ? 'RISCATTATO' : isRedeeming ? 'ASSEGNO...' : 'RISCATTA';
+    }
 
     return (
       <View style={styles.missionCard}>
+
         <View style={styles.missionHeader}>
-          <Text style={styles.missionTitle}>{item.title}</Text>
-          <Text style={styles.missionReward}>+{item.reward} crediti</Text>
+
+          <Text style={styles.missionTitle}>{item.name}</Text>
         </View>
-        <Text style={styles.missionDescription}>{item.description}</Text>
+        <View style={styles.scoreBlock}>
+          <Text style={[styles.missionDescription, styles.scorePositive]}>
+            +10 right answers
+          </Text>
+          <Text style={[styles.missionDescription, styles.scoreNegative]}>
+            -10 wrong answers
+          </Text>
+        </View>
+        <Text style={styles.progressText}>
+          {answered} completed questions / {total} questions
+        </Text>
 
         <TouchableOpacity
           style={[
             styles.claimButton,
-            (isClaimed || disabled) && styles.claimButtonDisabled,
+            isCompleted && isClaimed && styles.claimButtonDisabled,
           ]}
-          onPress={() => handleClaim(item)}
-          disabled={isClaimed || disabled}
+          onPress={() =>
+            isCompleted ? handleRedeemTheme(item) : handleStartTheme(item)
+          }
+          disabled={isClaimed || isRedeeming}
         >
-          <Text style={styles.claimLabel}>
-            {isClaimed ? 'Riscossa' : processing === item.id ? 'Assegno...' : 'Riscatta'}
-          </Text>
+          <Text style={styles.claimLabel}>{buttonLabel}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -92,22 +225,53 @@ const EarnScreen: React.FC = () => {
   return (
     <View style={styles.container}>
       <TopStatusBar />
-      <Text style={styles.title}>Earn</Text>
-      <Text style={styles.subtitle}>
-        Completa missioni giornaliere per accumulare nuovi crediti da spendere nello shop.
-      </Text>
-
-      <View style={styles.balanceCard}>
-        <Text style={styles.balanceLabel}>Crediti attuali</Text>
-        <Text style={styles.balanceValue}>{availableCredits}</Text>
+      <View style={styles.headerRow}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={handleExit}
+          activeOpacity={0.85}
+        >
+          <Ionicons
+            name="arrow-back"
+            size={22}
+            color="#00a028ff"
+          />
+        </TouchableOpacity>
+        <View style={styles.balanceCard}>
+          <Text style={styles.subtitle}>
+            Complete quizzes to earn new credits to spend in the shop
+          </Text>
+        </View>
       </View>
 
-      <FlatList
-        data={orderedMissions}
-        keyExtractor={item => item.id}
-        renderItem={renderMission}
-        contentContainerStyle={styles.listContent}
-      />
+      {loadingThemes && orderedThemes.length === 0 ? (
+        <View style={styles.loaderContainer}>
+          <ActivityIndicator size="large" color="#22c55e" />
+        </View>
+      ) : (
+        <FlatList
+          data={orderedThemes}
+          keyExtractor={item => item.slug}
+          renderItem={renderTheme}
+          contentContainerStyle={styles.listContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={loadingThemes}
+              onRefresh={fetchThemes}
+              tintColor="#22c55e"
+            />
+          }
+          ListEmptyComponent={
+            fetchError ? (
+              <Text style={styles.emptyMessage}>{fetchError}</Text>
+            ) : (
+              <Text style={styles.emptyMessage}>
+                Nessun quiz disponibile al momento.
+              </Text>
+            )
+          }
+        />
+      )}
     </View>
   );
 };
@@ -121,36 +285,39 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     backgroundColor: '#0e0c0f',
   },
-  title: {
-    fontSize: 30,
-    fontWeight: 'bold',
-    color: '#00a028ff',
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    columnGap: 12,
     marginTop: 12,
-    marginBottom: 6,
+    marginBottom: 12,
   },
   subtitle: {
     fontSize: 15,
     color: '#e2e8f0',
-    marginBottom: 24,
+    textAlign: 'left',
   },
   balanceCard: {
-    backgroundColor: 'rgba(15, 23, 42, 0.6)',
+    backgroundColor: 'rgba(15, 42, 24, 0.66)',
     borderColor: '#00a028ff',
     borderWidth: 1,
     borderRadius: 14,
     paddingVertical: 14,
     paddingHorizontal: 18,
     marginBottom: 20,
+    flex: 1,
   },
-  balanceLabel: {
-    fontSize: 14,
-    color: '#cbd5f5',
-    marginBottom: 4,
-  },
-  balanceValue: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#f8fafc',
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(15, 15, 19, 0.65)',
+    borderColor: 'rgba(0, 160, 40, 1)',
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    minWidth: 44,
+    height: 52,
   },
   listContent: {
     paddingBottom: 40,
@@ -161,7 +328,7 @@ const styles = StyleSheet.create({
     padding: 18,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: 'rgba(56, 189, 248, 0.35)',
+    borderColor: '#00a028ff',
   },
   missionHeader: {
     flexDirection: 'row',
@@ -170,18 +337,28 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   missionTitle: {
-    fontSize: 18,
+    fontSize: 24,
     fontWeight: '700',
     color: '#f8fafc',
-  },
-  missionReward: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#34d399',
+    textAlign: 'center',
   },
   missionDescription: {
     fontSize: 14,
     color: '#cbd5f5',
+    marginBottom: 8,
+  },
+  scoreBlock: {
+    marginBottom: 12,
+  },
+  scorePositive: {
+    color: '#34d399',
+  },
+  scoreNegative: {
+    color: '#f87171',
+  },
+  progressText: {
+    fontSize: 14,
+    color: '#e2e8f0',
     marginBottom: 18,
   },
   claimButton: {
@@ -197,5 +374,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#0e0c0f',
+  },
+  loaderContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyMessage: {
+    textAlign: 'center',
+    color: '#cbd5f5',
+    fontSize: 15,
+    paddingVertical: 40,
   },
 });
