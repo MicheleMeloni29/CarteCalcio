@@ -7,9 +7,8 @@ import React, {
   useState,
 } from 'react';
 
+import { API_BASE_URL } from '../constants/api';
 import { useAuth } from './AuthProvider';
-
-const BASE_URL = 'https://46ee1e42605c.ngrok-free.app';
 
 type CreditContextType = {
   credits: number | null;
@@ -62,7 +61,7 @@ export const CreditProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setLoading(true);
     try {
       const response = await callWithAuth(token =>
-        fetch(`${BASE_URL}/api/users/me/credits/`, {
+        fetch(`${API_BASE_URL}/api/users/me/credits/`, {
           method: 'GET',
           headers: {
             Authorization: `Bearer ${token}`,
@@ -104,7 +103,7 @@ export const CreditProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
       try {
         const response = await callWithAuth(token =>
-          fetch(`${BASE_URL}/api/users/me/credits/`, {
+          fetch(`${API_BASE_URL}/api/users/me/credits/`, {
             method: 'PATCH',
             headers: {
               'Content-Type': 'application/json',

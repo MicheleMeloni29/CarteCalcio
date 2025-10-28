@@ -10,6 +10,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { StackScreenProps } from '@react-navigation/stack';
+
+import { API_BASE_URL } from '../../constants/api';
 import type { AuthStackParamList } from '../navigators/AuthStackNavigation';
 
 type RegisterScreenProps = StackScreenProps<AuthStackParamList, 'Register'>;
@@ -22,9 +24,6 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
     const [isFormValid, setIsFormValid] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
     const [isPasswordVisible, setIsPasswordVisible] = useState(true);
-
-      const API_URL =
-        "https://6ce0435eea8f.ngrok-free.app";
 
     // Email validation
     const isValidEmail = (email: string) => {
@@ -57,7 +56,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
         }
 
         try {
-            const response = await fetch(`${API_URL}/api/users/register`, {
+            const response = await fetch(`${API_BASE_URL}/api/users/register`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

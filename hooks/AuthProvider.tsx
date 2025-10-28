@@ -8,6 +8,8 @@ import React, {
   useState,
 } from 'react';
 
+import { API_BASE_URL } from '../constants/api';
+
 type AuthTokens = {
   access: string;
   refresh: string | null;
@@ -21,7 +23,6 @@ interface AuthContextType {
   refreshAccessToken: () => Promise<string | null>;
 }
 
-const BASE_URL = 'https://46ee1e42605c.ngrok-free.app';
 const STORAGE_KEY = 'authTokens';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -95,7 +96,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     try {
-      const response = await fetch(`${BASE_URL}/api/users/token/refresh/`, {
+      const response = await fetch(`${API_BASE_URL}/api/users/token/refresh/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refresh: refreshToken }),

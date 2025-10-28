@@ -11,11 +11,8 @@ import {
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from '@expo/vector-icons';
+import { API_BASE_URL } from "../../constants/api";
 import { useAuth } from "../../hooks/AuthProvider";
-
-// URL del backend Django su ngrok
-const BASE_URL =
-    "https://46ee1e42605c.ngrok-free.app";
 
 const LoginScreen = () => {
     const navigation = useNavigation<any>();
@@ -29,7 +26,7 @@ const LoginScreen = () => {
     const handleLogin = async () => {
         setLoading(true);
         try {
-            const response = await fetch(`${BASE_URL}/api/users/token/`, {
+            const response = await fetch(`${API_BASE_URL}/api/users/token/`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json", },
                 body: JSON.stringify({ username, password }),

@@ -21,6 +21,7 @@ import type { RouteProp } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
 
+import { API_BASE_URL } from '../../constants/api';
 import { useCredits } from '../../hooks/CreditProvider';
 import TopStatusBar from '../../components/ui/TopStatusBar';
 import type {
@@ -28,7 +29,6 @@ import type {
   QuizProgressUpdate,
 } from '../navigators/MainStackNavigator';
 
-const BASE_URL = 'https://46ee1e42605c.ngrok-free.app';
 
 type QuizTheme = {
   id: number;
@@ -83,7 +83,7 @@ const EarnScreen: React.FC = () => {
     setLoadingThemes(true);
     setFetchError(null);
     try {
-      const response = await fetch(`${BASE_URL}/api/quiz/themes/`);
+      const response = await fetch(`${API_BASE_URL}/api/quiz/themes/`);
       if (!response.ok) {
         throw new Error(`Failed to fetch quiz themes (${response.status})`);
       }
@@ -239,7 +239,7 @@ const EarnScreen: React.FC = () => {
         </TouchableOpacity>
         <View style={styles.balanceCard}>
           <Text style={styles.subtitle}>
-            Complete quizzes to earn new credits to spend in the shop
+            Complete quiz to earn more credits
           </Text>
         </View>
       </View>
@@ -287,7 +287,7 @@ const styles = StyleSheet.create({
   },
   headerRow: {
     flexDirection: 'row',
-    alignItems: 'stretch',
+    alignItems: 'center',
     columnGap: 12,
     marginTop: 12,
     marginBottom: 12,
@@ -300,7 +300,7 @@ const styles = StyleSheet.create({
   balanceCard: {
     backgroundColor: 'rgba(15, 42, 24, 0.66)',
     borderColor: '#00a028ff',
-    borderWidth: 1,
+    borderWidth: 2,
     borderRadius: 14,
     paddingVertical: 14,
     paddingHorizontal: 18,
@@ -313,11 +313,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: 'rgba(15, 15, 19, 0.65)',
     borderColor: 'rgba(0, 160, 40, 1)',
-    borderWidth: 1,
+    borderWidth: 2,
     borderRadius: 14,
+    alignSelf: 'center',
     paddingHorizontal: 14,
-    minWidth: 44,
-    height: 52,
+    paddingVertical: 12,
+    marginBottom: 20,
   },
   listContent: {
     paddingBottom: 40,

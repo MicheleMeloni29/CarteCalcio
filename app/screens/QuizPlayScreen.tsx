@@ -22,10 +22,9 @@ import {
 import { StackNavigationProp } from '@react-navigation/stack';
 
 import TopStatusBar from '../../components/ui/TopStatusBar';
+import { API_BASE_URL } from '../../constants/api';
 import { useCredits } from '../../hooks/CreditProvider';
 import type { MainStackParamList } from '../navigators/MainStackNavigator';
-
-const BASE_URL = 'https://46ee1e42605c.ngrok-free.app';
 
 type QuizAnswer = {
   id: number;
@@ -59,7 +58,7 @@ const QuizPlayScreen: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`${BASE_URL}/api/quiz/themes/${themeSlug}/`);
+      const response = await fetch(`${API_BASE_URL}/api/quiz/themes/${themeSlug}/`);
       if (!response.ok) {
         throw new Error(`Failed to fetch questions (${response.status})`);
       }

@@ -22,13 +22,13 @@ DEBUG = True  # WARNING: Disable this in production!
 ALLOWED_HOSTS = [
     '127.0.0.1',
     'localhost',
-    '46ee1e42605c.ngrok-free.app',  # Ngrok URL
+    '.ngrok-free.app',  # Consente qualsiasi sottodominio Ngrok
 ]
 
 CSRF_TRUSTED_ORIGINS = [
     'https://127.0.0.1',
     'https://localhost',
-    'https://46ee1e42605c.ngrok-free.app',  # Ngrok URL
+    'https://*.ngrok-free.app',  # Consente qualsiasi sottodominio Ngrok
 ]
 
 # --------------------------------------------------------------------------------

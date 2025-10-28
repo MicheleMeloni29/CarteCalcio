@@ -3,6 +3,8 @@ import { FlatList, StyleSheet, View, Modal, TouchableOpacity, Text, ScrollView, 
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
+
+import { API_BASE_URL } from '../../constants/api';
 import Card from '../../components/ui/Card'; // Componente Card personalizzato
 import TopStatusBar from '../../components/ui/TopStatusBar';
 import type { MainStackParamList } from '../navigators/MainStackNavigator';
@@ -42,7 +44,7 @@ export default function AllCardsScreen() {
 
   const fetchCards = async () => {
     try {
-      const response = await fetch('https://46ee1e42605c.ngrok-free.app/api/cards/all/');
+      const response = await fetch(`${API_BASE_URL}/api/cards/all/`);
       console.log('Carte:', response);
       const data = await response.json();
       console.log('Dati dal backend:', JSON.stringify(data, null, 2));
@@ -510,12 +512,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#d0d5dd',
     borderRadius: 12,
     paddingVertical: 8,
     paddingHorizontal: 10,
     minHeight: 40,
-    backgroundColor: '#fff',
+    backgroundColor: 'rgba(15, 15, 19, 0.65)',
   },
   dropdownTriggerActive: {
     borderColor: '#00a028ff',
@@ -531,7 +532,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     fontWeight: '500',
-    color: '#1f2933',
+    color: '#00a028ff',
     marginRight: 8,
   },
   dropdownMenu: {
@@ -540,10 +541,10 @@ const styles = StyleSheet.create({
     left: -10,
     right: -10,
     marginTop: 6,
-    backgroundColor: '#fff',
+    backgroundColor: 'rgba(15, 15, 19, 0.65)',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#d0d5dd',
+    borderColor: '#00a028ff',
     maxHeight: 240,
     overflow: 'hidden',
     shadowColor: '#0f172a',
