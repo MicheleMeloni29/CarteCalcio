@@ -7,6 +7,7 @@ import type { StackNavigationProp } from '@react-navigation/stack';
 import { API_BASE_URL } from '../../constants/api';
 import Card from '../../components/ui/Card'; // Componente Card personalizzato
 import TopStatusBar from '../../components/ui/TopStatusBar';
+import { useAuth } from '../../hooks/AuthProvider';
 import type { MainStackParamList } from '../navigators/MainStackNavigator';
 
 // Definizione dell'interfaccia per il tipo di carta 
@@ -28,8 +29,46 @@ interface CardType {
 
 type DropdownKey = 'team' | 'rarity' | 'type';
 
-export default function AllCardsScreen() {
-  const navigation = useNavigation<StackNavigationProp<MainStackParamList, 'AllCards'>>();
+const normalizeRarity = (value: unknown): CardType['rarityColor'] => {
+  if (typeof value !== 'string') {
+    return 'common';
+  }
+  const lowered = value.toLowerCase();
+  if (lowered === 'rare' || lowered === 'epic' || lowered === 'legendary') {
+    return lowered as CardType['rarityColor'];
+  }
+  return 'common';
+};
+
+const parseOptionalNumber = (value: unknown): number | undefined => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === 'string') {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+  }
+  return undefined;
+};
+
+const coerceId = (value: unknown, fallback: number): number => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === 'string') {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+  }
+  return fallback;
+};
+
+export default function CollectionScreen() {
+  const navigation = useNavigation<StackNavigationProp<MainStackParamList, 'Collection'>>();
+  const { accessToken, refreshAccessToken } = useAuth();
   const [cards, setCards] = useState<CardType[]>([]);
   const [selectedCard, setSelectedCard] = useState<CardType | null>(null); // Stato per la carta selezionata
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
@@ -42,49 +81,127 @@ export default function AllCardsScreen() {
     bonusMalus: 'Bonus/Malus',
   };
 
-  const fetchCards = async () => {
+  const callWithAuth = useCallback(
+    async (request: (token: string) => Promise<Response>) => {
+      const attempt = async (
+        token: string | null,
+        allowRefresh: boolean,
+      ): Promise<Response> => {
+        if (!token) {
+          if (!allowRefresh) {
+            throw new Error('Missing access token');
+          }
+          const refreshed = await refreshAccessToken();
+          if (!refreshed) {
+            throw new Error('Missing access token');
+          }
+          return attempt(refreshed, false);
+        }
+
+        const response = await request(token);
+        if (response.status === 401 && allowRefresh) {
+          const refreshed = await refreshAccessToken();
+          if (!refreshed) {
+            throw new Error('Missing access token');
+          }
+          return attempt(refreshed, false);
+        }
+
+        return response;
+      };
+
+      return attempt(accessToken, true);
+    },
+    [accessToken, refreshAccessToken],
+  );
+
+  const fetchCards = useCallback(async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/cards/all/`);
-      console.log('Carte:', response);
+      const response = await callWithAuth(token =>
+        fetch(`${API_BASE_URL}/api/packs/collection/`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }),
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch collection (${response.status})`);
+      }
+
       const data = await response.json();
-      console.log('Dati dal backend:', JSON.stringify(data, null, 2));
 
-      // Ordino le carte player per team
-      const sortedPlayerCards = data.player_cards
-        .map((card: any) => ({
-          ...card,
-          type: 'player',
-          rarityColor: card.rarity, // Mappa direttamente la proprietà "rarity"
-        }))
-        .sort((a: any, b: any) => a.team.localeCompare(b.team));
+      const playerCards: CardType[] = (Array.isArray(data?.player_cards)
+        ? data.player_cards
+        : []
+      ).map((raw: any, index: number) => ({
+        id: coerceId(raw?.id, index + 1),
+        type: 'player',
+        name: typeof raw?.name === 'string' ? raw.name : 'Carta',
+        team: typeof raw?.team === 'string' ? raw.team : undefined,
+        attack: parseOptionalNumber(raw?.attack),
+        defense: parseOptionalNumber(raw?.defense),
+        abilities:
+          typeof raw?.abilities === 'string' ? raw.abilities : undefined,
+        effect: undefined,
+        duration: undefined,
+        attackBonus: undefined,
+        defenseBonus: undefined,
+        image_url:
+          typeof raw?.image_url === 'string' ? raw.image_url : undefined,
+        rarityColor: normalizeRarity(raw?.rarity),
+      }));
 
-      const allCards = [
-        ...sortedPlayerCards,
-        ...data.coach_cards.map((card: any) => ({
-          ...card,
-          type: 'coach',
-          attackBonus: card.attack_bonus || 0,
-          defenseBonus: card.defense_bonus || 0,
-          rarityColor: card.rarity,
-        })),
-        ...data.bonus_malus_cards.map((card: any) => ({
-          ...card,
-          type: 'bonusMalus',
-          rarityColor: card.rarity,
-        })),
-      ];
+      const coachCards: CardType[] = (Array.isArray(data?.coach_cards)
+        ? data.coach_cards
+        : []
+      ).map((raw: any, index: number) => ({
+        id: coerceId(raw?.id, index + 1000),
+        type: 'coach',
+        name: typeof raw?.name === 'string' ? raw.name : 'Allenatore',
+        team: typeof raw?.team === 'string' ? raw.team : undefined,
+        attack: undefined,
+        defense: undefined,
+        abilities: undefined,
+        effect: undefined,
+        duration: undefined,
+        attackBonus: parseOptionalNumber(raw?.attack_bonus),
+        defenseBonus: parseOptionalNumber(raw?.defense_bonus),
+        image_url:
+          typeof raw?.image_url === 'string' ? raw.image_url : undefined,
+        rarityColor: normalizeRarity(raw?.rarity),
+      }));
 
-      console.log('Carte elaborate:', allCards);
-      setCards(allCards);
+      const bonusCards: CardType[] = (Array.isArray(data?.bonus_malus_cards)
+        ? data.bonus_malus_cards
+        : []
+      ).map((raw: any, index: number) => ({
+        id: coerceId(raw?.id, index + 2000),
+        type: 'bonusMalus',
+        name: typeof raw?.name === 'string' ? raw.name : 'Bonus/Malus',
+        team: undefined,
+        attack: undefined,
+        defense: undefined,
+        abilities: undefined,
+        effect: typeof raw?.effect === 'string' ? raw.effect : undefined,
+        duration: parseOptionalNumber(raw?.duration),
+        attackBonus: undefined,
+        defenseBonus: undefined,
+        image_url:
+          typeof raw?.image_url === 'string' ? raw.image_url : undefined,
+        rarityColor: normalizeRarity(raw?.rarity),
+      }));
+
+      setCards([...playerCards, ...coachCards, ...bonusCards]);
     } catch (error) {
-      console.error('Errore nel recupero delle carte:', error);
+      console.error('Errore nel recupero della collezione:', error);
+      setCards([]);
     }
-  };
-
+  }, [callWithAuth]);
 
   useEffect(() => {
     fetchCards();
-  }, []);
+  }, [fetchCards]);
 
   const teamOptions = useMemo(() => {
     const teams = new Set<string>();
@@ -237,25 +354,31 @@ export default function AllCardsScreen() {
     }
   };
 
-  const renderCard = ({ item }: { item: CardType }) => (
-    <TouchableOpacity onPress={() => setSelectedCard(item)}>
-      <Card
-        size="small"
-        type={item.type}
-        name={item.name}
-        team={item.team}
-        attack={item.attack}
-        defense={item.defense}
-        abilities={item.abilities}
-        effect={item.effect}
-        duration={item.duration}
-        attackBonus={item.attackBonus}
-        defenseBonus={item.defenseBonus}
-        image={{ uri: item.image_url }}
-        rarity={item.rarityColor} // Passa direttamente il valore di "rarityColor"
-      />
-    </TouchableOpacity>
-  );
+  const renderCard = ({ item }: { item: CardType }) => {
+    const imageSource = item.image_url
+      ? { uri: item.image_url }
+      : require('../../assets/images/AllCardsBackground.jpg');
+
+    return (
+      <TouchableOpacity onPress={() => setSelectedCard(item)}>
+        <Card
+          size="small"
+          type={item.type}
+          name={item.name}
+          team={item.team}
+          attack={item.attack}
+          defense={item.defense}
+          abilities={item.abilities}
+          effect={item.effect}
+          duration={item.duration}
+          attackBonus={item.attackBonus}
+          defenseBonus={item.defenseBonus}
+          image={imageSource}
+          rarity={item.rarityColor}
+        />
+      </TouchableOpacity>
+    );
+  };
 
 
   return (
@@ -281,109 +404,109 @@ export default function AllCardsScreen() {
               />
             </TouchableOpacity>
             <View style={styles.dropdownRow}>
-            {dropdownDefinitions.map(({ key, label }) => {
-              const isOpen = activeDropdown === key;
-              const hasValue = hasSelectedValue(key);
-              const options = dropdownOptions[key] ?? [];
+              {dropdownDefinitions.map(({ key, label }) => {
+                const isOpen = activeDropdown === key;
+                const hasValue = hasSelectedValue(key);
+                const options = dropdownOptions[key] ?? [];
 
-              return (
-                <View
-                  key={key}
-                  style={[
-                    styles.dropdownWrapper,
-                    isOpen && styles.dropdownWrapperActive,
-                  ]}
-                >
-                  <TouchableOpacity
+                return (
+                  <View
+                    key={key}
                     style={[
-                      styles.dropdownTrigger,
-                      (isOpen || hasValue) && styles.dropdownTriggerActive,
+                      styles.dropdownWrapper,
+                      isOpen && styles.dropdownWrapperActive,
                     ]}
-                    activeOpacity={0.85}
-                    onPress={() => toggleDropdown(key)}
                   >
-                    <Text style={styles.dropdownLabel}>{label}</Text>
-                    <Text style={styles.dropdownValue} numberOfLines={1}>
-                      {getSelectedLabel(key)}
-                    </Text>
-                    <Ionicons
-                      name={isOpen ? 'chevron-up' : 'chevron-down'}
-                      size={16}
-                      color={isOpen ? '#00751c' : '#1f2933'}
-                    />
-                  </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.dropdownTrigger,
+                        (isOpen || hasValue) && styles.dropdownTriggerActive,
+                      ]}
+                      activeOpacity={0.85}
+                      onPress={() => toggleDropdown(key)}
+                    >
+                      <Text style={styles.dropdownLabel}>{label}</Text>
+                      <Text style={styles.dropdownValue} numberOfLines={1}>
+                        {getSelectedLabel(key)}
+                      </Text>
+                      <Ionicons
+                        name={isOpen ? 'chevron-up' : 'chevron-down'}
+                        size={16}
+                        color={isOpen ? '#00751c' : '#1f2933'}
+                      />
+                    </TouchableOpacity>
 
-                  {isOpen && (
-                    <View style={styles.dropdownMenu}>
-                      <ScrollView
-                        nestedScrollEnabled
-                        showsVerticalScrollIndicator={false}
-                      >
-                        <TouchableOpacity
-                          style={[
-                            styles.dropdownOption,
-                            isOptionSelected(key, null) &&
-                            styles.dropdownOptionActive,
-                            options.length === 0 && styles.dropdownOptionLast,
-                          ]}
-                          onPress={() => handleDropdownSelect(key, null)}
+                    {isOpen && (
+                      <View style={styles.dropdownMenu}>
+                        <ScrollView
+                          nestedScrollEnabled
+                          showsVerticalScrollIndicator={false}
                         >
-                          <Text
+                          <TouchableOpacity
                             style={[
-                              styles.dropdownOptionText,
+                              styles.dropdownOption,
                               isOptionSelected(key, null) &&
-                              styles.dropdownOptionTextActive,
+                              styles.dropdownOptionActive,
+                              options.length === 0 && styles.dropdownOptionLast,
                             ]}
+                            onPress={() => handleDropdownSelect(key, null)}
                           >
-                            Tutte
-                          </Text>
-                          {isOptionSelected(key, null) && (
-                            <Ionicons
-                              name="checkmark"
-                              size={16}
-                              color="#00ff3cff"
-                            />
-                          )}
-                        </TouchableOpacity>
-
-                        {options.map((option, index) => {
-                          const isSelected = isOptionSelected(key, option);
-                          const isLast = index === options.length - 1;
-
-                          return (
-                            <TouchableOpacity
-                              key={`${key}-${option}`}
+                            <Text
                               style={[
-                                styles.dropdownOption,
-                                isSelected && styles.dropdownOptionActive,
-                                isLast && styles.dropdownOptionLast,
+                                styles.dropdownOptionText,
+                                isOptionSelected(key, null) &&
+                                styles.dropdownOptionTextActive,
                               ]}
-                              onPress={() => handleDropdownSelect(key, option)}
                             >
-                              <Text
+                              Tutte
+                            </Text>
+                            {isOptionSelected(key, null) && (
+                              <Ionicons
+                                name="checkmark"
+                                size={16}
+                                color="#00ff3cff"
+                              />
+                            )}
+                          </TouchableOpacity>
+
+                          {options.map((option, index) => {
+                            const isSelected = isOptionSelected(key, option);
+                            const isLast = index === options.length - 1;
+
+                            return (
+                              <TouchableOpacity
+                                key={`${key}-${option}`}
                                 style={[
-                                  styles.dropdownOptionText,
-                                  isSelected && styles.dropdownOptionTextActive,
+                                  styles.dropdownOption,
+                                  isSelected && styles.dropdownOptionActive,
+                                  isLast && styles.dropdownOptionLast,
                                 ]}
+                                onPress={() => handleDropdownSelect(key, option)}
                               >
-                                {formatOptionLabel(key, option)}
-                              </Text>
-                              {isSelected && (
-                                <Ionicons
-                                  name="checkmark"
-                                  size={16}
-                                  color="#00751c"
-                                />
-                              )}
-                            </TouchableOpacity>
-                          );
-                        })}
-                      </ScrollView>
-                    </View>
-                  )}
-                </View>
-              );
-            })}
+                                <Text
+                                  style={[
+                                    styles.dropdownOptionText,
+                                    isSelected && styles.dropdownOptionTextActive,
+                                  ]}
+                                >
+                                  {formatOptionLabel(key, option)}
+                                </Text>
+                                {isSelected && (
+                                  <Ionicons
+                                    name="checkmark"
+                                    size={16}
+                                    color="#00751c"
+                                  />
+                                )}
+                              </TouchableOpacity>
+                            );
+                          })}
+                        </ScrollView>
+                      </View>
+                    )}
+                  </View>
+                );
+              })}
             </View>
           </View>
         </View>

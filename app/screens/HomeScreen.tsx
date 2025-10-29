@@ -16,9 +16,9 @@ type HomeScreenNavigationProp = StackNavigationProp<MainStackParamList, 'Home'>;
 const menuItems = [
   {
     key: 'collections',
-    label: 'COLLECTIONS',
-    description: 'View all available cards',
-    route: 'AllCards' as const,
+    label: 'COLLECTION',
+    description: 'View the cards you own',
+    route: 'Collection' as const,
   },
   {
     key: 'shop',

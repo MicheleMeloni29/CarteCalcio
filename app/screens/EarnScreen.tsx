@@ -37,7 +37,40 @@ type QuizTheme = {
   question_count: number;
 };
 
-const SECTION_COMPLETION_BONUS = 200;
+type ThemeDetail = {
+  positiveReward: number;
+  negativePenalty: number;
+  completionMultiplier: number;
+};
+
+const DEFAULT_THEME_DETAIL: ThemeDetail = {
+  positiveReward: 10,
+  negativePenalty: 5,
+  completionMultiplier: 10,
+};
+
+const THEME_DETAILS: Record<string, ThemeDetail> = {
+  champions: {
+    positiveReward: 10,
+    negativePenalty: 5,
+    completionMultiplier: 10,
+  },
+  'top-scorer': {
+    positiveReward: 15,
+    negativePenalty: 5,
+    completionMultiplier: 15,
+  },
+  'top_scorer': {
+    positiveReward: 15,
+    negativePenalty: 5,
+    completionMultiplier: 15,
+  },
+  records: {
+    positiveReward: 20,
+    negativePenalty: 5,
+    completionMultiplier: 20,
+  },
+};
 
 const EarnScreen: React.FC = () => {
   const { adjustCredits } = useCredits();
@@ -49,17 +82,36 @@ const EarnScreen: React.FC = () => {
   const [loadingThemes, setLoadingThemes] = useState<boolean>(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [progress, setProgress] = useState<Record<string, number>>({});
+  const [correctCounts, setCorrectCounts] = useState<Record<string, number>>({});
   const [claimedThemes, setClaimedThemes] = useState<Record<string, boolean>>({});
   const [redeemingTheme, setRedeemingTheme] = useState<string | null>(null);
   const lastProgressKeyRef = useRef<string | null>(null);
 
   const orderedThemes = useMemo(
-    () => [...themes].sort((a, b) => a.name.localeCompare(b.name)),
+    () =>
+      [...themes].sort((a, b) => {
+        if (a.slug === 'records' && b.slug !== 'records') {
+          return 1;
+        }
+        if (b.slug === 'records' && a.slug !== 'records') {
+          return -1;
+        }
+        return a.name.localeCompare(b.name);
+      }),
     [themes],
   );
 
   const ensureProgressShape = useCallback((loadedThemes: QuizTheme[]) => {
     setProgress(prev => {
+      const next = { ...prev };
+      loadedThemes.forEach(theme => {
+        if (next[theme.slug] === undefined) {
+          next[theme.slug] = 0;
+        }
+      });
+      return next;
+    });
+    setCorrectCounts(prev => {
       const next = { ...prev };
       loadedThemes.forEach(theme => {
         if (next[theme.slug] === undefined) {
@@ -110,6 +162,10 @@ const EarnScreen: React.FC = () => {
         ...prev,
         [update.slug]: Math.min(update.total, update.answered),
       }));
+      setCorrectCounts(prev => ({
+        ...prev,
+        [update.slug]: Math.min(update.total, update.correct ?? 0),
+      }));
     },
     [],
   );
@@ -119,7 +175,7 @@ const EarnScreen: React.FC = () => {
     if (!update) {
       return;
     }
-    const updateKey = `${update.slug}:${update.answered}:${update.total}`;
+    const updateKey = `${update.slug}:${update.answered}:${update.total}:${update.correct ?? 0}`;
     if (lastProgressKeyRef.current === updateKey) {
       return;
     }
@@ -134,14 +190,15 @@ const EarnScreen: React.FC = () => {
         themeName: theme.name,
         totalQuestions: theme.question_count,
         initialAnswered: progress[theme.slug] ?? 0,
+        initialCorrect: correctCounts[theme.slug] ?? 0,
       });
     },
-    [navigation, progress],
+    [navigation, progress, correctCounts],
   );
 
   const handleExit = useCallback(() => {
     if (navigation.canGoBack()) {
-      navigation.goBack();
+      navigation.navigate('Home');
     } else {
       navigation.navigate('Home');
     }
@@ -154,14 +211,26 @@ const EarnScreen: React.FC = () => {
         return;
       }
 
+      const detail = THEME_DETAILS[theme.slug] ?? DEFAULT_THEME_DETAIL;
+      const correctAnswers = correctCounts[theme.slug] ?? 0;
+      const completionBonus = detail.completionMultiplier * correctAnswers;
+
+      if (completionBonus <= 0) {
+        Alert.alert(
+          'Nessun bonus disponibile',
+          'Completa almeno una risposta corretta per ottenere il bonus finale.',
+        );
+        return;
+      }
+
       setRedeemingTheme(theme.slug);
 
       try {
-        await adjustCredits(SECTION_COMPLETION_BONUS);
+        await adjustCredits(completionBonus);
         setClaimedThemes(prev => ({ ...prev, [theme.slug]: true }));
         Alert.alert(
           'Bonus riscattato',
-          `Hai ottenuto ${SECTION_COMPLETION_BONUS} crediti extra per aver completato ${theme.name}.`,
+          `Hai ottenuto ${completionBonus} crediti extra per aver completato ${theme.name}.`,
         );
       } catch (error) {
         Alert.alert(
@@ -172,7 +241,7 @@ const EarnScreen: React.FC = () => {
         setRedeemingTheme(null);
       }
     },
-    [adjustCredits, claimedThemes, redeemingTheme],
+    [adjustCredits, claimedThemes, correctCounts, redeemingTheme],
   );
 
   const renderTheme = ({ item }: { item: QuizTheme }) => {
@@ -181,6 +250,11 @@ const EarnScreen: React.FC = () => {
     const isCompleted = total > 0 && answered >= total;
     const isClaimed = claimedThemes[item.slug];
     const isRedeeming = redeemingTheme === item.slug;
+    const details = THEME_DETAILS[item.slug] ?? DEFAULT_THEME_DETAIL;
+    const correct = correctCounts[item.slug] ?? 0;
+    const positiveText = `+${details.positiveReward} crediti per ogni risposta corretta`;
+    const negativeText = `-${details.negativePenalty} crediti per ogni risposta errata`;
+    const completionText = `Bonus finale: ${details.completionMultiplier} crediti per ogni risposta corretta`;
 
     let buttonLabel = 'START';
     if (isCompleted) {
@@ -195,15 +269,16 @@ const EarnScreen: React.FC = () => {
           <Text style={styles.missionTitle}>{item.name}</Text>
         </View>
         <View style={styles.scoreBlock}>
+          <Text style={styles.missionSubtitle}>{completionText}</Text>
           <Text style={[styles.missionDescription, styles.scorePositive]}>
-            +10 right answers
+            {positiveText}
           </Text>
           <Text style={[styles.missionDescription, styles.scoreNegative]}>
-            -10 wrong answers
+            {negativeText}
           </Text>
         </View>
         <Text style={styles.progressText}>
-          {answered} completed questions / {total} questions
+          {answered} domande completate su {total} • Risposte corrette: {correct}
         </Text>
 
         <TouchableOpacity
@@ -342,6 +417,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#f8fafc',
     textAlign: 'center',
+  },
+  missionSubtitle: {
+    fontSize: 14,
+    color: '#cbd5f5',
+    marginBottom: 6,
   },
   missionDescription: {
     fontSize: 14,

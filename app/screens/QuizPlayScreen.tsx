@@ -39,11 +39,38 @@ type QuizQuestion = {
   answers: QuizAnswer[];
 };
 
+type RewardConfig = {
+  correct: number;
+  wrong: number;
+  completion: number;
+};
+
+const DEFAULT_REWARD_CONFIG: RewardConfig = {
+  correct: 10,
+  wrong: 5,
+  completion: 10,
+};
+
+const REWARD_CONFIG_MAP: Record<string, RewardConfig> = {
+  champions: { correct: 10, wrong: 5, completion: 10 },
+  'top-scorer': { correct: 15, wrong: 5, completion: 15 },
+  'top_scorer': { correct: 15, wrong: 5, completion: 15 },
+  records: { correct: 20, wrong: 5, completion: 20 },
+};
+
 const QuizPlayScreen: React.FC = () => {
   const route = useRoute<RouteProp<MainStackParamList, 'QuizPlay'>>();
   const navigation = useNavigation<StackNavigationProp<MainStackParamList, 'QuizPlay'>>();
-  const { themeSlug, themeName, initialAnswered = 0 } = route.params;
+  const { themeSlug, themeName, initialAnswered = 0, initialCorrect = 0 } = route.params;
   const { adjustCredits } = useCredits();
+
+  const rewardConfig = useMemo(
+    () => REWARD_CONFIG_MAP[themeSlug] ?? DEFAULT_REWARD_CONFIG,
+    [themeSlug],
+  );
+
+  const [correctCount, setCorrectCount] = useState<number>(initialCorrect);
+  const initialCorrectRef = useRef<number>(initialCorrect);
 
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
@@ -53,6 +80,12 @@ const QuizPlayScreen: React.FC = () => {
   const [answeredCount, setAnsweredCount] = useState<number>(0);
   const initialAnsweredRef = useRef<number>(initialAnswered);
   const [isAwarding, setIsAwarding] = useState<boolean>(false);
+
+  useEffect(() => {
+    initialAnsweredRef.current = initialAnswered;
+    initialCorrectRef.current = initialCorrect;
+    setCorrectCount(initialCorrect);
+  }, [initialAnswered, initialCorrect]);
 
   const fetchQuestions = useCallback(async () => {
     setLoading(true);
@@ -79,6 +112,12 @@ const QuizPlayScreen: React.FC = () => {
       setCurrentIndex(startIndex);
       setSelectedAnswerId(null);
       setAnsweredCount(boundedInitial);
+      const boundedCorrect = Math.max(
+        0,
+        Math.min(initialCorrectRef.current ?? 0, total),
+      );
+      setCorrectCount(boundedCorrect);
+      initialCorrectRef.current = boundedCorrect;
       initialAnsweredRef.current = boundedInitial;
     } catch (err) {
       console.error('Unable to load quiz questions', err);
@@ -95,18 +134,20 @@ const QuizPlayScreen: React.FC = () => {
   const currentQuestion: QuizQuestion | undefined = questions[currentIndex];
 
   const finishQuiz = useCallback(
-    (finalAnswered: number) => {
+    (finalAnswered: number, finalCorrect: number) => {
       if (questions.length === 0) {
         navigation.goBack();
         return;
       }
 
       const normalizedAnswered = Math.min(finalAnswered, questions.length);
+      const normalizedCorrect = Math.min(finalCorrect, questions.length);
       navigation.navigate('Earn', {
         progressUpdate: {
           slug: themeSlug,
           answered: normalizedAnswered,
           total: questions.length,
+          correct: normalizedCorrect,
         },
       });
     },
@@ -117,8 +158,8 @@ const QuizPlayScreen: React.FC = () => {
     if (isAwarding) {
       return;
     }
-    finishQuiz(answeredCount);
-  }, [answeredCount, finishQuiz, isAwarding]);
+    finishQuiz(answeredCount, initialCorrectRef.current ?? correctCount);
+  }, [answeredCount, correctCount, finishQuiz, isAwarding]);
 
   const handleAnswerPress = useCallback(
     async (answer: QuizAnswer) => {
@@ -127,15 +168,24 @@ const QuizPlayScreen: React.FC = () => {
       }
 
       const previousAnswered = answeredCount;
+      const previousCorrect = correctCount;
       const nextAnswered = Math.min(answeredCount + 1, questions.length);
+      const nextCorrect = answer.is_correct
+        ? Math.min(previousCorrect + 1, questions.length)
+        : previousCorrect;
 
       setSelectedAnswerId(answer.id);
       setAnsweredCount(nextAnswered);
+      setCorrectCount(nextCorrect);
       setIsAwarding(true);
 
       try {
-        await adjustCredits(answer.is_correct ? 10 : -10);
+        const delta = answer.is_correct
+          ? rewardConfig.correct
+          : -rewardConfig.wrong;
+        await adjustCredits(delta);
         initialAnsweredRef.current = nextAnswered;
+        initialCorrectRef.current = nextCorrect;
       } catch (err) {
         console.error('Unable to adjust credits from quiz answer', err);
         const errorMessage =
@@ -145,7 +195,9 @@ const QuizPlayScreen: React.FC = () => {
         Alert.alert('Errore crediti', errorMessage);
         setSelectedAnswerId(null);
         setAnsweredCount(previousAnswered);
+        setCorrectCount(previousCorrect);
         initialAnsweredRef.current = previousAnswered;
+        initialCorrectRef.current = previousCorrect;
       } finally {
         setIsAwarding(false);
       }
@@ -153,9 +205,11 @@ const QuizPlayScreen: React.FC = () => {
     [
       adjustCredits,
       answeredCount,
+      correctCount,
       currentQuestion,
       isAwarding,
       questions.length,
+      rewardConfig,
       selectedAnswerId,
     ],
   );
@@ -167,7 +221,7 @@ const QuizPlayScreen: React.FC = () => {
 
     const isLastQuestion = currentIndex >= questions.length - 1;
     if (isLastQuestion) {
-      finishQuiz(answeredCount);
+      finishQuiz(answeredCount, initialCorrectRef.current ?? correctCount);
       return;
     }
 
@@ -175,6 +229,7 @@ const QuizPlayScreen: React.FC = () => {
     setSelectedAnswerId(null);
   }, [
     answeredCount,
+    correctCount,
     currentIndex,
     currentQuestion,
     finishQuiz,
@@ -359,8 +414,8 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 18,
     marginBottom: 18,
-    borderWidth: 1,
-    borderColor: 'rgba(56, 189, 248, 0.35)',
+    borderWidth: 2,
+    borderColor: '#00a028ff',
   },
   questionText: {
     fontSize: 18,
