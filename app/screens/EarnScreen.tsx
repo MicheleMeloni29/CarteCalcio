@@ -50,6 +50,11 @@ const DEFAULT_THEME_DETAIL: ThemeDetail = {
 };
 
 const THEME_DETAILS: Record<string, ThemeDetail> = {
+  stadiums: {
+    positiveReward: 10,
+    negativePenalty: 0,
+    completionMultiplier: 10,
+  },
   champions: {
     positiveReward: 10,
     negativePenalty: 5,
@@ -90,6 +95,12 @@ const EarnScreen: React.FC = () => {
   const orderedThemes = useMemo(
     () =>
       [...themes].sort((a, b) => {
+        if (a.slug === 'stadiums' && b.slug !== 'stadiums') {
+          return -1;
+        }
+        if (b.slug === 'stadiums' && a.slug !== 'stadiums') {
+          return 1;
+        }
         if (a.slug === 'records' && b.slug !== 'records') {
           return 1;
         }

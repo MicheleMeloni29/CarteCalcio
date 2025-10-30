@@ -14,12 +14,9 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import {
-  RouteProp,
-  useNavigation,
-  useRoute,
-} from '@react-navigation/native';
+import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { Ionicons } from '@expo/vector-icons';
 
 import TopStatusBar from '../../components/ui/TopStatusBar';
 import { API_BASE_URL } from '../../constants/api';
@@ -45,6 +42,17 @@ type RewardConfig = {
   completion: number;
 };
 
+const shuffleArray = <T,>(input: T[]): T[] => {
+  const result = [...input];
+  for (let i = result.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const temp = result[i];
+    result[i] = result[j];
+    result[j] = temp;
+  }
+  return result;
+};
+
 const DEFAULT_REWARD_CONFIG: RewardConfig = {
   correct: 10,
   wrong: 5,
@@ -52,6 +60,7 @@ const DEFAULT_REWARD_CONFIG: RewardConfig = {
 };
 
 const REWARD_CONFIG_MAP: Record<string, RewardConfig> = {
+  stadiums: { correct: 10, wrong: 0, completion: 10 },
   champions: { correct: 10, wrong: 5, completion: 10 },
   'top-scorer': { correct: 15, wrong: 5, completion: 15 },
   'top_scorer': { correct: 15, wrong: 5, completion: 15 },
@@ -102,8 +111,11 @@ const QuizPlayScreen: React.FC = () => {
             answers: Array.isArray(question.answers) ? question.answers : [],
           }))
         : [];
-      setQuestions(loadedQuestions);
-      const total = loadedQuestions.length;
+      const previouslyAnswered = initialAnsweredRef.current ?? 0;
+      const normalizedQuestions =
+        previouslyAnswered > 0 ? loadedQuestions : shuffleArray(loadedQuestions);
+      setQuestions(normalizedQuestions);
+      const total = normalizedQuestions.length;
       const boundedInitial = Math.max(
         0,
         Math.min(initialAnsweredRef.current ?? 0, total),
@@ -257,12 +269,18 @@ const QuizPlayScreen: React.FC = () => {
   return (
     <View style={styles.container}>
       <TopStatusBar />
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.exitButton} onPress={handleExit}>
-          <Text style={styles.exitLabel}>Back</Text>
+      <View style={styles.headerRow}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={handleExit}
+          activeOpacity={0.85}
+        >
+          <Ionicons name="arrow-back" size={22} color="#00a028ff" />
         </TouchableOpacity>
-        <Text style={styles.heading}>{themeName}</Text>
-        <Text style={styles.counter}>{questionCounterText}</Text>
+        <View style={styles.headerContent}>
+          <Text style={styles.heading}>{themeName}</Text>
+          <Text style={styles.counter}>{questionCounterText}</Text>
+        </View>
       </View>
 
       {loading ? (
@@ -352,32 +370,37 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     backgroundColor: '#0e0c0f',
   },
-  header: {
-    marginBottom: 12,
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    columnGap: 12,
+    marginBottom: 32,
+    marginTop: 20,
+  },
+  headerContent: {
+    flex: 1,
+    alignItems: 'center',
   },
   heading: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#22c55e',
-    textAlign: 'center',
+    color: '#00a028ff',
   },
   counter: {
     fontSize: 14,
     color: '#f8fafc',
-    textAlign: 'center',
     marginTop: 6,
   },
-  exitButton: {
-    alignSelf: 'flex-end',
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    backgroundColor: 'rgba(248, 250, 252, 0.08)',
-    borderRadius: 10,
-    marginBottom: 8,
-  },
-  exitLabel: {
-    color: '#f8fafc',
-    fontSize: 14,
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(15, 15, 19, 0.65)',
+    borderColor: 'rgba(0, 160, 40, 1)',
+    borderWidth: 2,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
   },
   loaderContainer: {
     flex: 1,

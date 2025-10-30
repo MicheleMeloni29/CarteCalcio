@@ -16,9 +16,15 @@ type HomeScreenNavigationProp = StackNavigationProp<MainStackParamList, 'Home'>;
 const menuItems = [
   {
     key: 'collections',
-    label: 'COLLECTION',
+    label: 'COLLECTIONS',
     description: 'View the cards you own',
     route: 'Collection' as const,
+  },
+  {
+    key: 'earn',
+    label: 'EARN',
+    description: 'Learn how to earn rewards',
+    route: 'Earn' as const,
   },
   {
     key: 'shop',
@@ -27,10 +33,16 @@ const menuItems = [
     route: 'Shop' as const,
   },
   {
-    key: 'earn',
-    label: 'EARN',
-    description: 'Learn how to earn rewards',
-    route: 'Earn' as const,
+    key: 'exchange',
+    label: 'EXCHANGE',
+    description: 'Swap duplicate cards with others',
+    route: 'Exchange' as const,
+  },
+  {
+    key: 'achievement',
+    label: 'ACHIEVEMENT',
+    description: 'Track your progress and trophies',
+    route: 'Achievement' as const,
   },
   {
     key: 'settings',
@@ -45,7 +57,7 @@ const HomeScreen: React.FC = () => {
 
   return (
     <ImageBackground
-      source={require('../../assets/images/HomeBackground.jpg')}
+      source={require('../../assets/images//Backgrounds/HomeBackground.jpg')}
       style={styles.background}
       imageStyle={styles.backgroundImage}
     >
@@ -59,7 +71,7 @@ const HomeScreen: React.FC = () => {
 
             <View style={styles.menuContainer}>
               {menuItems.map((item, index) => {
-                const isLeftAligned = index === 1 || item.key === 'settings';
+                const isLeftAligned = index % 2 === 1;
 
                 return (
                   <TouchableOpacity
@@ -146,15 +158,16 @@ const styles = StyleSheet.create({
     color: '#00a028ff',
     textAlign: 'center',
     marginBottom: 12,
+    marginTop: 20,
   },
   subtitle: {
     fontSize: 16,
     color: '#d0d0d0',
     textAlign: 'center',
-    marginBottom: 60,
+    marginBottom: 30,
   },
   menuContainer: {
-    gap: 30,
+    gap: 20,
   },
   menuButtonWrapper: {
     width: '90%',
@@ -163,12 +176,12 @@ const styles = StyleSheet.create({
   },
   menuButtonWrapperLeft: {
     alignSelf: 'flex-start',
-    marginLeft: 60,
+    marginLeft: 66,
     marginRight: 'auto',
   },
   menuButtonWrapperRight: {
     alignSelf: 'flex-start',
-    marginLeft: -44,
+    marginLeft: -50,
     marginRight: 'auto',
   },
   menuButtonBackground: {
@@ -176,8 +189,8 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 4,
     borderColor: '#00a028ff',
-    paddingVertical: 20,
-    paddingHorizontal: 28,
+    paddingVertical: 14,
+    paddingHorizontal: 18,
   },
   menuButtonBackgroundLeft: {
     transform: [{ skewX: '12deg' }],
@@ -208,7 +221,7 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: 'bold',
     color: '#00a028ff',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   menuDescription: {
     fontSize: 14,

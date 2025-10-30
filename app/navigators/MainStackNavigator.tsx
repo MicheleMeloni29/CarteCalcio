@@ -6,6 +6,8 @@ import CollectionScreen from '../screens/CollectionScreen';
 import ShopScreen from '../screens/ShopScreen';
 import EarnScreen from '../screens/EarnScreen';
 import SettingsScreen from '../screens/SettingsScreen';
+import ExchangeScreen from '../screens/ExchangeScreen';
+import AchievementScreen from '../screens/AchievementScreen';
 import QuizPlayScreen from '../screens/QuizPlayScreen';
 import PackOpenScreen from '../screens/PackOpenScreen';
 
@@ -37,6 +39,8 @@ export type MainStackParamList = {
     Collection: undefined;
     Shop: undefined;
     Earn: { progressUpdate?: QuizProgressUpdate } | undefined;
+    Exchange: undefined;
+    Achievement: undefined;
     Settings: undefined;
     QuizPlay: {
         themeSlug: string;
@@ -67,6 +71,8 @@ const MainStackNavigator: React.FC = () => (
         <Stack.Screen name="Collection" component={CollectionScreen} />
         <Stack.Screen name="Shop" component={ShopScreen} />
         <Stack.Screen name="Earn" component={EarnScreen} />
+        <Stack.Screen name="Exchange" component={ExchangeScreen} />
+        <Stack.Screen name="Achievement" component={AchievementScreen} />
         <Stack.Screen name="Settings" component={SettingsScreen} />
         <Stack.Screen name="QuizPlay" component={QuizPlayScreen} />
         <Stack.Screen name="PackOpen" component={PackOpenScreen} />

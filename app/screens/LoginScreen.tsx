@@ -54,7 +54,7 @@ const LoginScreen = () => {
     };
 
     return (
-        <ImageBackground source={require('../../assets/images/loginBackground.webp')} style={styles.background} imageStyle={{ opacity: 0.7 }}>
+        <ImageBackground source={require('../../assets/images//Backgrounds/LoginBackground.webp')} style={styles.background} imageStyle={{ opacity: 0.7 }}>
             <View style={styles.overlay}>
                 <Text style={styles.welcomeText}>Welcome to</Text>
                 <Text style={styles.appName}>Serie A Excange</Text>

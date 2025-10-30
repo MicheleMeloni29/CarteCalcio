@@ -357,7 +357,7 @@ export default function CollectionScreen() {
   const renderCard = ({ item }: { item: CardType }) => {
     const imageSource = item.image_url
       ? { uri: item.image_url }
-      : require('../../assets/images/AllCardsBackground.jpg');
+      : require('../../assets/images/Backgrounds/CollectionBackground.jpg');
 
     return (
       <TouchableOpacity onPress={() => setSelectedCard(item)}>
@@ -383,7 +383,7 @@ export default function CollectionScreen() {
 
   return (
     <ImageBackground
-      source={require('../../assets/images/AllCardsBackground.jpg')}
+      source={require('../../assets/images/Backgrounds/CollectionBackground.jpg')}
       style={styles.background}
       imageStyle={styles.backgroundImage}
     >

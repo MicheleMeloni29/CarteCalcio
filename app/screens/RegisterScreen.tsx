@@ -29,7 +29,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
     const isValidEmail = (email: string) => {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         return emailRegex.test(email);
-     };
+    };
 
     // Check validity form
     useEffect(() => {
@@ -89,7 +89,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
 
     return (
         <ImageBackground
-            source={require('../../assets/images/loginBackground.webp')}
+            source={require('../../assets/images/Backgrounds/LoginBackground.webp')}
             style={styles.background}
             imageStyle={{ opacity: 0.7 }}
         >
