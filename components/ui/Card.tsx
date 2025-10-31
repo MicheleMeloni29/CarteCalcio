@@ -59,7 +59,7 @@ const normalizeTeamName = (team: string | undefined): string => {
     .join(' ');
 };
 
-const Card: React.FC<CardProps> = ({
+const CardComponent: React.FC<CardProps> = ({
   size = 'medium',
   type,
   name,
@@ -75,31 +75,24 @@ const Card: React.FC<CardProps> = ({
   rarity = 'common', // Default alla rarità "common"
 }) => {
   const sizes = {
-    small: { width: 80, height: 115, fontSize: 2.8, padding: 2.8, borderWidth: 5.6 },
-    medium: { width: 150, height: 225, fontSize: 6, padding: 6, borderWidth: 12 },
+    small: { width: 80, height: 120, fontSize: 2.8, padding: 2.8, borderWidth: 5.6 },
+    medium: { width: 180, height: 270, fontSize: 7, padding: 7, borderWidth: 14 },
     large: { width: 350, height: 525, fontSize: 14, padding: 14, borderWidth: 28 },
   };
 
   const cardStyle = sizes[size] || sizes.medium;
+  const imageHeight =
+    size === 'large'
+      ? cardStyle.height * 0.6
+      : size === 'medium'
+      ? cardStyle.height * 0.55
+      : cardStyle.height * 0.52;
 
   const normalizedTeam = normalizeTeamName(team);
   const repeatedColors: [string, string, ...string[]] = teamColors[normalizedTeam]
     ? Array(5).fill(teamColors[normalizedTeam]).flat() as [string, string, ...string[]]
     : ['#ccc', '#000']; // Fallback ai colori di default
   const borderColor = rarityColors[rarity?.toLowerCase() as keyof typeof rarityColors] || '#000';
-
-  const metallicBorderColors = [
-    borderColor,
-    '#ffffff', // Riflessione brillante
-    borderColor,
-    '#d9d9d9', // Ombreggiatura chiara
-    borderColor,
-  ];
-
-  console.log(`Card: ${name}, Team: ${team}, Rarity: ${rarity}`);
-  console.log(`Repeated Colors: ${repeatedColors}, Border Color: ${borderColor}`);
-
-
 
   return (
     <LinearGradient
@@ -126,8 +119,14 @@ const Card: React.FC<CardProps> = ({
         {team && <Text style={[styles.team, { fontSize: cardStyle.fontSize }]}>{team}</Text>}
       </View>
       {/* Immagine */}
-      <Image source={{ uri: image.uri }}
-        style={styles.image}
+      <Image
+        source={{ uri: image.uri }}
+        style={[
+          styles.image,
+          {
+            height: imageHeight,
+          },
+        ]}
         onError={() => {
           console.error('Errore nel caricamento immagine', image.uri)
           image.uri = 'https://www.thermaxglobal.com/wp-content/uploads/2020/05/image-not-found.jpg'
@@ -280,4 +279,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default Card;
+export default React.memo(CardComponent);

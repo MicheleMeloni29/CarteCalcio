@@ -11,7 +11,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { StackScreenProps } from '@react-navigation/stack';
 
-import { API_BASE_URL } from '../../constants/api';
+import { buildApiUrl } from '../../constants/api';
 import type { AuthStackParamList } from '../navigators/AuthStackNavigation';
 
 type RegisterScreenProps = StackScreenProps<AuthStackParamList, 'Register'>;
@@ -23,7 +23,8 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [isFormValid, setIsFormValid] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
-    const [isPasswordVisible, setIsPasswordVisible] = useState(true);
+    const [isPasswordHidden, setIsPasswordHidden] = useState(true);
+    const [isConfirmPasswordHidden, setIsConfirmPasswordHidden] = useState(true);
 
     // Email validation
     const isValidEmail = (email: string) => {
@@ -56,14 +57,14 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
         }
 
         try {
-            const response = await fetch(`${API_BASE_URL}/api/users/register`, {
+            const response = await fetch(buildApiUrl('/api/users/register/'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     username: userName,
                     email: email,
                     password: password,
-                    confirm_Password: confirmPassword,
+                    confirm_password: confirmPassword,
                 }),
             });
 
@@ -121,10 +122,10 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
                             value={password}
                             onChangeText={setPassword}
                             autoCapitalize="none"
-                            secureTextEntry={isPasswordVisible}
+                            secureTextEntry={isPasswordHidden}
                         />
-                        <TouchableOpacity onPress={() => setIsPasswordVisible(!isPasswordVisible)}>
-                            <Ionicons name={isPasswordVisible ? "eye-off" : "eye"} size={24} color="#00a028ff" />
+                        <TouchableOpacity onPress={() => setIsPasswordHidden((prev) => !prev)}>
+                            <Ionicons name={isPasswordHidden ? "eye-off" : "eye"} size={24} color="#00a028ff" />
                         </TouchableOpacity>
                     </View>
                     <View style={styles.passwordContainer}>
@@ -135,10 +136,10 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
                             value={confirmPassword}
                             onChangeText={setConfirmPassword}
                             autoCapitalize="none"
-                            secureTextEntry={isPasswordVisible}
+                            secureTextEntry={isConfirmPasswordHidden}
                         />
-                        <TouchableOpacity onPress={() => setIsPasswordVisible(!isPasswordVisible)}>
-                            <Ionicons name={isPasswordVisible ? "eye-off" : "eye"} size={24} color="#00a028ff" />
+                        <TouchableOpacity onPress={() => setIsConfirmPasswordHidden((prev) => !prev)}>
+                            <Ionicons name={isConfirmPasswordHidden ? "eye-off" : "eye"} size={24} color="#00a028ff" />
                         </TouchableOpacity>
                     </View>
 

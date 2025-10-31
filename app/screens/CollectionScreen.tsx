@@ -550,10 +550,10 @@ export default function CollectionScreen() {
                 rarity={selectedCard.rarityColor} // Passa il colore della rarità come prop "rarity"
               />
               <TouchableOpacity
-                style={styles.closeButton}
+                style={styles.backButton}
                 onPress={() => setSelectedCard(null)}
               >
-                <Text style={styles.closeButtonText}>Chiudi</Text>
+                <Text style= {styles.backButtonText}>Exit</Text>
               </TouchableOpacity>
             </View>
           </Modal>
@@ -594,12 +594,13 @@ const styles = StyleSheet.create({
   },
   filtersRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'stretch',
     columnGap: 12,
   },
   backButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: 'rgba(15, 15, 19, 0.65)',
     borderColor: 'rgba(0, 160, 40, 1)',
     borderWidth: 2,
@@ -607,7 +608,13 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 12,
     minHeight: 40,
+    alignSelf: 'stretch',
   },
+  backButtonText :{
+    color: '#00a028ff',
+    fontSize: 16,
+    fontWeight: '700',
+},
   backLabel: {
     textAlign: 'center',
     fontSize: 20,

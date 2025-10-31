@@ -49,6 +49,9 @@ const DEFAULT_THEME_DETAIL: ThemeDetail = {
   completionMultiplier: 10,
 };
 
+const normalizeThemeSlug = (slug?: string) =>
+  slug?.toLowerCase().replace(/[/_]/g, '-') ?? '';
+
 const THEME_DETAILS: Record<string, ThemeDetail> = {
   stadiums: {
     positiveReward: 10,
@@ -75,7 +78,20 @@ const THEME_DETAILS: Record<string, ThemeDetail> = {
     negativePenalty: 5,
     completionMultiplier: 20,
   },
+  'season24/25': {
+    positiveReward: 30,
+    negativePenalty: 15,
+    completionMultiplier: 30,
+  },
+  'season24-25': {
+    positiveReward: 30,
+    negativePenalty: 15,
+    completionMultiplier: 30,
+  },
 };
+
+const resolveThemeDetail = (slug?: string): ThemeDetail =>
+  THEME_DETAILS[normalizeThemeSlug(slug)] ?? THEME_DETAILS[slug ?? ''] ?? DEFAULT_THEME_DETAIL;
 
 const EarnScreen: React.FC = () => {
   const { adjustCredits } = useCredits();
@@ -92,25 +108,34 @@ const EarnScreen: React.FC = () => {
   const [redeemingTheme, setRedeemingTheme] = useState<string | null>(null);
   const lastProgressKeyRef = useRef<string | null>(null);
 
-  const orderedThemes = useMemo(
-    () =>
-      [...themes].sort((a, b) => {
-        if (a.slug === 'stadiums' && b.slug !== 'stadiums') {
-          return -1;
-        }
-        if (b.slug === 'stadiums' && a.slug !== 'stadiums') {
-          return 1;
-        }
-        if (a.slug === 'records' && b.slug !== 'records') {
-          return 1;
-        }
-        if (b.slug === 'records' && a.slug !== 'records') {
-          return -1;
-        }
-        return a.name.localeCompare(b.name);
-      }),
-    [themes],
-  );
+  const orderedThemes = useMemo(() => {
+    const isSeasonSlug = (slug: string | undefined) =>
+      typeof slug === 'string' && slug.toLowerCase().startsWith('season24');
+
+    return [...themes].sort((a, b) => {
+      if (a.slug === 'stadiums' && b.slug !== 'stadiums') {
+        return -1;
+      }
+      if (b.slug === 'stadiums' && a.slug !== 'stadiums') {
+        return 1;
+      }
+      const aIsSeason = isSeasonSlug(a.slug);
+      const bIsSeason = isSeasonSlug(b.slug);
+      if (aIsSeason && !bIsSeason) {
+        return 1;
+      }
+      if (bIsSeason && !aIsSeason) {
+        return -1;
+      }
+      if (a.slug === 'records' && b.slug !== 'records') {
+        return 1;
+      }
+      if (b.slug === 'records' && a.slug !== 'records') {
+        return -1;
+      }
+      return a.name.localeCompare(b.name);
+    });
+  }, [themes]);
 
   const ensureProgressShape = useCallback((loadedThemes: QuizTheme[]) => {
     setProgress(prev => {
@@ -222,7 +247,7 @@ const EarnScreen: React.FC = () => {
         return;
       }
 
-      const detail = THEME_DETAILS[theme.slug] ?? DEFAULT_THEME_DETAIL;
+      const detail = resolveThemeDetail(theme.slug);
       const correctAnswers = correctCounts[theme.slug] ?? 0;
       const completionBonus = detail.completionMultiplier * correctAnswers;
 
@@ -252,7 +277,7 @@ const EarnScreen: React.FC = () => {
         setRedeemingTheme(null);
       }
     },
-    [adjustCredits, claimedThemes, correctCounts, redeemingTheme],
+    [adjustCredits, claimedThemes, correctCounts, redeemingTheme, resolveThemeDetail],
   );
 
   const renderTheme = ({ item }: { item: QuizTheme }) => {
@@ -261,7 +286,7 @@ const EarnScreen: React.FC = () => {
     const isCompleted = total > 0 && answered >= total;
     const isClaimed = claimedThemes[item.slug];
     const isRedeeming = redeemingTheme === item.slug;
-    const details = THEME_DETAILS[item.slug] ?? DEFAULT_THEME_DETAIL;
+    const details = resolveThemeDetail(item.slug);
     const correct = correctCounts[item.slug] ?? 0;
     const positiveText = `+${details.positiveReward} crediti per ogni risposta corretta`;
     const negativeText = `-${details.negativePenalty} crediti per ogni risposta errata`;

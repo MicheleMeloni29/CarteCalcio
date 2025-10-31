@@ -59,12 +59,16 @@ const DEFAULT_REWARD_CONFIG: RewardConfig = {
   completion: 10,
 };
 
+const normalizeThemeSlug = (slug: string | undefined) =>
+  slug?.toLowerCase().replace(/[/_]/g, '-') ?? '';
+
 const REWARD_CONFIG_MAP: Record<string, RewardConfig> = {
   stadiums: { correct: 10, wrong: 0, completion: 10 },
   champions: { correct: 10, wrong: 5, completion: 10 },
   'top-scorer': { correct: 15, wrong: 5, completion: 15 },
   'top_scorer': { correct: 15, wrong: 5, completion: 15 },
   records: { correct: 20, wrong: 5, completion: 20 },
+  'season24-25': { correct: 30, wrong: 15, completion: 30 },
 };
 
 const QuizPlayScreen: React.FC = () => {
@@ -73,9 +77,14 @@ const QuizPlayScreen: React.FC = () => {
   const { themeSlug, themeName, initialAnswered = 0, initialCorrect = 0 } = route.params;
   const { adjustCredits } = useCredits();
 
-  const rewardConfig = useMemo(
-    () => REWARD_CONFIG_MAP[themeSlug] ?? DEFAULT_REWARD_CONFIG,
+  const normalizedThemeSlug = useMemo(
+    () => themeSlug?.toLowerCase().replace(/[/_]/g, '-') ?? themeSlug,
     [themeSlug],
+  );
+
+  const rewardConfig = useMemo(
+    () => REWARD_CONFIG_MAP[normalizedThemeSlug ?? themeSlug] ?? DEFAULT_REWARD_CONFIG,
+    [normalizedThemeSlug, themeSlug],
   );
 
   const [correctCount, setCorrectCount] = useState<number>(initialCorrect);
@@ -504,3 +513,4 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
+
