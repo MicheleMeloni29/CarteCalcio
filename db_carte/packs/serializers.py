@@ -59,7 +59,11 @@ def serialize_opened_card(opened_card: OpenedCard, request=None) -> Dict[str, An
     )
 
 
-def serialize_collection_card(card, request=None) -> Dict[str, Any]:
+def serialize_collection_card(
+    card,
+    request=None,
+    quantity: Optional[int] = None,
+) -> Dict[str, Any]:
     if isinstance(card, PlayerCard):
         card_type = "player"
     elif isinstance(card, CoachCard):
@@ -69,12 +73,16 @@ def serialize_collection_card(card, request=None) -> Dict[str, Any]:
 
     rarity_name = card.rarity.name if getattr(card, "rarity", None) else None
 
-    return _serialize_card_payload(
+    payload = _serialize_card_payload(
         card=card,
         card_type=card_type,
         rarity_name=rarity_name,
         request=request,
     )
+
+    payload["quantity"] = 1 if quantity is None else max(1, int(quantity))
+
+    return payload
 
 
 def _serialize_card_payload(card, card_type: str, rarity_name: Optional[str], request=None) -> Dict[str, Any]:
@@ -84,6 +92,7 @@ def _serialize_card_payload(card, card_type: str, rarity_name: Optional[str], re
         "rarity": rarity_name,
         "name": getattr(card, "name", ""),
         "image_url": _build_image_url(card, request),
+        "season": getattr(card, "season", None),
     }
 
     if isinstance(card, PlayerCard):

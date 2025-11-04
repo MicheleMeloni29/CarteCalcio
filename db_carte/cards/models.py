@@ -56,6 +56,7 @@ class PlayerCard(models.Model):
         choices=TEAMS, 
         default="BERGAMO"
     )
+    season = models.CharField(max_length=20, default="24/25.1")
     attack = models.IntegerField()
     defense = models.IntegerField()
     abilities = models.TextField(blank=True, null=True)
@@ -81,6 +82,7 @@ class CoachCard(models.Model):
         choices=TEAMS, 
         default="BERGAMO"
     )
+    season = models.CharField(max_length=20, default="24/25.1")
     attack_bonus = models.FloatField()
     defense_bonus = models.FloatField()
     image = models.ImageField(upload_to="coach_images/", blank=True, null=True)
@@ -97,6 +99,7 @@ class BonusMalusCard(models.Model):
     name = models.CharField(max_length=100)
     effect = models.TextField(blank=True, null=True)
     duration = models.IntegerField()
+    season = models.CharField(max_length=20, default="24/25.1")
     rarity = models.ForeignKey(CardRarity, on_delete=models.SET_NULL, null=True, related_name="cards")
     image = models.ImageField(upload_to="bonus_malus_images/", blank=True, null=True)
 

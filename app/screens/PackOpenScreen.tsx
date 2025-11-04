@@ -457,6 +457,7 @@ const PackOpenScreen: React.FC = () => {
         defenseBonus={item.defense_bonus ?? undefined}
         image={imageSource}
         rarity={rarity}
+        season={item.season ?? undefined}
       />
     );
   }, []);

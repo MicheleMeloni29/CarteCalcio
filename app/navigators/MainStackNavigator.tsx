@@ -23,6 +23,7 @@ export type OpenedPackCard = {
     type: string;
     rarity: string | null;
     name: string;
+    season?: string | null;
     image_url?: string | null;
     team?: string | null;
     attack?: number | null;

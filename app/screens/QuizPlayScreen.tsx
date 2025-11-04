@@ -59,14 +59,26 @@ const DEFAULT_REWARD_CONFIG: RewardConfig = {
   completion: 10,
 };
 
-const normalizeThemeSlug = (slug: string | undefined) =>
-  slug?.toLowerCase().replace(/[/_]/g, '-') ?? '';
+const normalizeThemeSlug = (slug?: string) => {
+  if (!slug) {
+    return '';
+  }
+  const sanitized = slug
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+  const seasonMatch = sanitized.match(/^(season)-?(\d{2})-?(\d{2})$/);
+  if (seasonMatch) {
+    return `${seasonMatch[1]}${seasonMatch[2]}-${seasonMatch[3]}`;
+  }
+  return sanitized;
+};
 
 const REWARD_CONFIG_MAP: Record<string, RewardConfig> = {
   stadiums: { correct: 10, wrong: 0, completion: 10 },
   champions: { correct: 10, wrong: 5, completion: 10 },
   'top-scorer': { correct: 15, wrong: 5, completion: 15 },
-  'top_scorer': { correct: 15, wrong: 5, completion: 15 },
   records: { correct: 20, wrong: 5, completion: 20 },
   'season24-25': { correct: 30, wrong: 15, completion: 30 },
 };
@@ -78,12 +90,15 @@ const QuizPlayScreen: React.FC = () => {
   const { adjustCredits } = useCredits();
 
   const normalizedThemeSlug = useMemo(
-    () => themeSlug?.toLowerCase().replace(/[/_]/g, '-') ?? themeSlug,
+    () => normalizeThemeSlug(themeSlug),
     [themeSlug],
   );
 
   const rewardConfig = useMemo(
-    () => REWARD_CONFIG_MAP[normalizedThemeSlug ?? themeSlug] ?? DEFAULT_REWARD_CONFIG,
+    () =>
+      REWARD_CONFIG_MAP[normalizedThemeSlug] ??
+      (themeSlug ? REWARD_CONFIG_MAP[themeSlug] : undefined) ??
+      DEFAULT_REWARD_CONFIG,
     [normalizedThemeSlug, themeSlug],
   );
 

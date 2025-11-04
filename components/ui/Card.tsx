@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet, Image } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { View, Text, StyleSheet, Image, ImageSourcePropType } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 // Cards component
@@ -13,49 +13,144 @@ interface CardProps {
   abilities?: string;
   effect?: string;
   duration?: number;
+  imageScale?: number;
   attackBonus?: number;
   defenseBonus?: number;
-  image: any;
+  image?: { uri: string } | number | null;
   rarity?: 'common' | 'rare' | 'epic' | 'legendary'; // Usa rarità come chiave
+  season?: string | null;
 }
 
-const teamColors: { [key: string]: string[] } = {
-  'Bergamo': ['#12151f', '#174ba1'],          // midnightblue, black
-  'Virtus': ['#0000ff', '#b22222'],           // blue, firebrick
-  '4mori': ['#000080', '#8b0000'],            // navy, darkred
-  'Lakecity': ['#0000cd', '#00ffff'],         // mediumblue, cyan
-  'Toscani': ['#4169e1', '#87ceeb'],          // royalblue, 
-  'Viola': ['#800080', '#654698'],            // purple  
-  'Grifoni': ['#1e2937', '#f04b35'],          // midnightblue, darkred
-  'Veneti': ['#01295b', '#e0d048'],           // midnightblue, darkkhaki
-  'Lombardia': ['#000000', '#0000cd'],         // black, mediumblue
-  'Zebre': ['#f0f8ff', '#000000'],            // aliceblue, black
-  'Aquile': ['#b0d6f4', '#bbe0f9'],           // cyan 
-  'Salento': ['#ffd700', '#b22222'],          // gold, firebrick
-  'Diavoli': ['#000000', '#ea2b30'],          // firebrick, black
-  'Brianza': ['#f6f4f2', '#da0c2d'],          // firebrick  
-  'Partenopi': ['#3396ce', '#87ceeb'],        // skyblue
-  'Parmigiani': ['#e9e056', '#282b33'],        // mediumblue, gold
-  'Lupi': ['#a89763', '#600619'],             // darkred, goldenrod
-  'Granata': ['#853643', '#470a15'],          // maroon
-  'Friulani': ['#0e0f15', '#cdcfe3'],         // black, lightsteelblue
-  'Leoni': ['#f98b49', '#537162'],            // orange, green
+const FALLBACK_IMAGE_URI =
+  'https://www.thermaxglobal.com/wp-content/uploads/2020/05/image-not-found.jpg';
+
+const isRemoteImage = (value: unknown): value is { uri: string } => {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+  const uri = (value as { uri?: unknown }).uri;
+  return typeof uri === 'string' && uri.length > 0;
 };
 
-const rarityColors = {
+const teamColors: { [key: string]: string[] } = {
+  Bergamo: ['#12151f', '#174ba1'],
+  Virtus: ['#0000ff', '#b22222'],
+  '4mori': ['#000080', '#8b0000'],
+  Lakecity: ['#0000cd', '#00ffff'],
+  Toscani: ['#4169e1', '#87ceeb'],
+  Viola: ['#800080', '#654698'],
+  Grifoni: ['#1e2937', '#f04b35'],
+  Veneti: ['#01295b', '#e0d048'],
+  Lombardia: ['#000000', '#0000cd'],
+  Zebre: ['#f0f8ff', '#000000'],
+  Aquile: ['#b0d6f4', '#bbe0f9'],
+  Salento: ['#ffd700', '#b22222'],
+  Diavoli: ['#000000', '#ea2b30'],
+  Brianza: ['#f6f4f2', '#da0c2d'],
+  Partenopi: ['#3396ce', '#87ceeb'],
+  Parmigiani: ['#e9e056', '#282b33'],
+  Lupi: ['#a89763', '#600619'],
+  Granata: ['#853643', '#470a15'],
+  Friulani: ['#0e0f15', '#cdcfe3'],
+  Leoni: ['#f98b49', '#537162'],
+};
+
+const rarityColors: Record<Exclude<CardProps['rarity'], undefined>, string> = {
   common: '#9b5200',
   rare: '#d8d8d8',
   epic: '#ffd100',
   legendary: '#35ffb3',
 };
 
+const rarityBorderGradients: Partial<Record<Exclude<CardProps['rarity'], undefined>, string[]>> = {
+  rare: [
+    '#D8DEE9',  // silver chiaro
+    '#bac1c5ff',  // silver medio
+    '#9a9fa1ff',  // leggero riflesso
+    '#71797cff',  // ripetizione media
+    '#D8DEE9',  // silver chiaro
+    '#bac1c5ff',  // silver medio
+    '#9a9fa1ff',  // leggero riflesso
+    '#71797cff',  // ripetizione media
+    '#D8DEE9',  // silver chiaro
+    '#bac1c5ff',  // silver medio
+    '#9a9fa1ff',  // leggero riflesso
+    '#71797cff',  // ripetizione media
+  ],
+  epic: [
+    '#FFF4C2', // highlight oro chiaro
+    '#f6e592ff', // highlight giallo
+    '#F0C859', // oro principale
+    '#D4A017', // ombra ambrata
+    '#FFF4C2', // secondo highlight
+    '#f6e592ff', // highlight giallo
+    '#F0C859', // oro principale di ritorno
+    '#D4A017', // ombra finale
+    '#FFF4C2', // highlight oro chiaro
+    '#f6e592ff', // highlight giallo
+    '#F0C859', // oro principale
+    '#D4A017', // ombra ambrata
+    '#FFF4C2', // secondo highlight
+    '#f6e592ff', // highlight giallo
+    '#F0C859', // oro principale di ritorno
+    '#D4A017', // ombra finale
+  ],
+  legendary: [
+    '#C6FFE9', // highlight magico
+    '#3AFFB8', // smeraldo brillante
+    '#16C98D', // verde prezioso
+    '#0A7A55', // profondità
+    '#16C98D', // ritorno al verde prezioso
+    '#3AFFB8', // secondo smeraldo
+    '#C6FFE9', // highlight finale
+    '#3AFFB8', // accento conclusivo
+    '#C6FFE9', // highlight magico
+    '#3AFFB8', // smeraldo brillante
+    '#16C98D', // verde prezioso
+    '#0A7A55', // profondità
+    '#16C98D', // ritorno al verde prezioso
+    '#3AFFB8', // secondo smeraldo
+    '#C6FFE9', // highlight finale
+    '#3AFFB8', // accento conclusivo
+    '#C6FFE9', // highlight magico
+    '#3AFFB8', // smeraldo brillante
+    '#16C98D', // verde prezioso
+    '#0A7A55', // profondità
+    '#16C98D', // ritorno al verde prezioso
+    '#3AFFB8', // secondo smeraldo
+  ],
+};
+
+
+const rarityGlowStyles: Partial<
+  Record<Exclude<CardProps['rarity'], undefined>, { shadowColor: string; shadowOpacity: number; shadowRadius: number; elevation: number }>
+> = {
+  rare: {
+    shadowColor: '#b5c9ff',
+    shadowOpacity: 0.45,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  epic: {
+    shadowColor: '#ffdf87',
+    shadowOpacity: 0.55,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  legendary: {
+    shadowColor: '#3dff9b',
+    shadowOpacity: 0.6,
+    shadowRadius: 14,
+    elevation: 9,
+  },
+};
+
 const normalizeTeamName = (team: string | undefined): string => {
   if (!team) return '';
-  // Converti tutto in minuscolo e capitalizza la prima lettera
   return team
     .toLowerCase()
     .split(' ')
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
 };
 
@@ -63,7 +158,7 @@ const CardComponent: React.FC<CardProps> = ({
   size = 'medium',
   type,
   name,
-  team = 'Unknown', // Default al team "Unknown"
+  team = 'Unknown',
   attack,
   defense,
   abilities,
@@ -71,8 +166,10 @@ const CardComponent: React.FC<CardProps> = ({
   duration,
   attackBonus,
   defenseBonus,
+  imageScale,
   image,
-  rarity = 'common', // Default alla rarità "common"
+  rarity = 'common',
+  season,
 }) => {
   const sizes = {
     small: { width: 80, height: 120, fontSize: 2.8, padding: 2.8, borderWidth: 5.6 },
@@ -81,38 +178,121 @@ const CardComponent: React.FC<CardProps> = ({
   };
 
   const cardStyle = sizes[size] || sizes.medium;
-  const imageHeight =
-    size === 'large'
-      ? cardStyle.height * 0.6
-      : size === 'medium'
-      ? cardStyle.height * 0.55
-      : cardStyle.height * 0.52;
+
+  const imageConfig = {
+    large: {
+      heightScale: 0.64,
+      marginTop: -cardStyle.height * 0.015,
+      marginBottom: cardStyle.height * 0.06,
+    },
+    medium: {
+      heightScale: 0.7,
+      marginTop: -cardStyle.height * 0.02,
+      marginBottom: cardStyle.height * 0.035,
+    },
+    small: {
+      heightScale: 0.62,
+      marginTop: -cardStyle.height * 0.015,
+      marginBottom: cardStyle.height * 0.03,
+    },
+  } as const;
+
+  const baseConfig = imageConfig[size] ?? imageConfig.medium;
+  const normalizedScale =
+    typeof imageScale === 'number' && Number.isFinite(imageScale)
+      ? imageScale
+      : baseConfig.heightScale;
+  const clampedScale = Math.min(Math.max(normalizedScale, 0.3), 0.9);
+  const scaleDelta = clampedScale - baseConfig.heightScale;
+  const imageHeight = cardStyle.height * clampedScale;
+  const effectiveMarginTop =
+    baseConfig.marginTop - scaleDelta * cardStyle.height * 0.35;
+  const effectiveMarginBottom = Math.max(
+    baseConfig.marginBottom - scaleDelta * cardStyle.height * 0.25,
+    cardStyle.height * 0.015,
+  );
+
+  const containerPadding = cardStyle.padding;
+  const containerBorderWidth = cardStyle.borderWidth;
+
+  const isStaticResource = typeof image === 'number';
+  const providedRemoteUri = isRemoteImage(image) ? image.uri : null;
+  const staticResource = isStaticResource ? (image as number) : null;
+  const [fallbackUri, setFallbackUri] = useState<string | null>(null);
+
+  useEffect(() => {
+    setFallbackUri(null);
+  }, [providedRemoteUri, staticResource]);
+
+  const resolvedImageSource = useMemo<ImageSourcePropType>(() => {
+    if (fallbackUri) {
+      return { uri: fallbackUri };
+    }
+    if (providedRemoteUri) {
+      return { uri: providedRemoteUri };
+    }
+    if (staticResource !== null) {
+      return staticResource;
+    }
+    return { uri: FALLBACK_IMAGE_URI };
+  }, [fallbackUri, providedRemoteUri, staticResource]);
 
   const normalizedTeam = normalizeTeamName(team);
   const repeatedColors: [string, string, ...string[]] = teamColors[normalizedTeam]
-    ? Array(5).fill(teamColors[normalizedTeam]).flat() as [string, string, ...string[]]
-    : ['#ccc', '#000']; // Fallback ai colori di default
-  const borderColor = rarityColors[rarity?.toLowerCase() as keyof typeof rarityColors] || '#000';
+    ? (Array(5).fill(teamColors[normalizedTeam]).flat() as [string, string, ...string[]])
+    : ['#ccc', '#000'];
 
-  return (
+  const normalizedRarity = rarity.toLowerCase() as Exclude<CardProps['rarity'], undefined>;
+  const borderColor = rarityColors[normalizedRarity] || '#000';
+  const borderGradient = rarityBorderGradients[normalizedRarity];
+  const glowStyle = rarityGlowStyles[normalizedRarity];
+  const seasonLabel = typeof season === 'string' && season.trim().length > 0 ? season.trim() : null;
+  const seasonFontScale =
+    size === 'large' ? 0.75 : size === 'medium' ? 0.78 : 0.82;
+
+  const outerDimensions = {
+    width: cardStyle.width,
+    height: cardStyle.height,
+    borderRadius: cardStyle.width / 8 + containerBorderWidth,
+    padding: containerBorderWidth,
+  };
+
+  const cardContent = (
     <LinearGradient
       colors={repeatedColors}
-      style={[
-        styles.card,
-        {
-          width: cardStyle.width,
-          height: cardStyle.height,
-          borderRadius: cardStyle.width / 8,
-          padding: cardStyle.padding,
-          backgroundColor: 'transparent',
-          borderWidth: cardStyle.borderWidth,
-          borderColor: borderColor,
-          borderStyle: 'solid',
-        },
-      ]}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 0 }}
+      style={[
+        styles.cardInner,
+        {
+          borderRadius: cardStyle.width / 8,
+          padding: containerPadding,
+        },
+      ]}
     >
+      {seasonLabel && (
+        <View
+          pointerEvents="none"
+          style={[
+            styles.seasonLabelContainer,
+            {
+              right: Math.max(containerPadding * 0.2, 2),
+            },
+          ]}
+        >
+          <Text
+            style={[
+              styles.seasonLabelText,
+              {
+                fontSize: cardStyle.fontSize * seasonFontScale,
+              },
+            ]}
+            numberOfLines={1}
+          >
+            {seasonLabel.toUpperCase()}
+          </Text>
+        </View>
+      )}
       {/* Contenitore superiore: Nome e Squadra */}
       <View style={styles.header}>
         <Text style={[styles.name, { fontSize: cardStyle.fontSize * 1.2 }]}>{name}</Text>
@@ -120,16 +300,20 @@ const CardComponent: React.FC<CardProps> = ({
       </View>
       {/* Immagine */}
       <Image
-        source={{ uri: image.uri }}
+        source={resolvedImageSource}
+        resizeMode="cover"
         style={[
           styles.image,
           {
             height: imageHeight,
+            marginTop: effectiveMarginTop,
+            marginBottom: effectiveMarginBottom,
           },
         ]}
         onError={() => {
-          console.error('Errore nel caricamento immagine', image.uri)
-          image.uri = 'https://www.thermaxglobal.com/wp-content/uploads/2020/05/image-not-found.jpg'
+          if (!fallbackUri) {
+            setFallbackUri(FALLBACK_IMAGE_URI);
+          }
         }}
       />
       {/* Statistiche player */}
@@ -178,19 +362,64 @@ const CardComponent: React.FC<CardProps> = ({
       {type === 'bonusMalus' && (
         <View style={styles.bonusMalus}>
           <Text style={[styles.effect, { fontSize: cardStyle.fontSize * 0.9 }]}>{effect}</Text>
-          {duration && <Text style={[styles.duration, { fontSize: cardStyle.fontSize * 0.8 }]}>Duration: {duration} turns</Text>}
+          {duration && (
+            <Text style={[styles.duration, { fontSize: cardStyle.fontSize * 0.8 }]}>
+              Duration: {duration} turns
+            </Text>
+          )}
         </View>
       )}
     </LinearGradient>
   );
+
+  if (borderGradient) {
+    return (
+      <LinearGradient
+        colors={borderGradient}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={[styles.cardOuter, outerDimensions, glowStyle]}
+      >
+        {cardContent}
+      </LinearGradient>
+    );
+  }
+
+  return (
+    <View
+      style={[
+        styles.cardOuter,
+        outerDimensions,
+        {
+          backgroundColor: borderColor,
+        },
+      ]}
+    >
+      {cardContent}
+    </View>
+  );
 };
 
 const styles = StyleSheet.create({
-  card: {
-    alignItems: 'center',
-    justifyContent: 'space-between', // Spaziatura uniforme
+  cardOuter: {
     margin: 4,
-    elevation: 5,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowOffset: { width: 0, height: 6 },
+    shadowRadius: 8,
+    elevation: 6,
+    borderRadius: 20,
+  },
+  cardInner: {
+    flex: 1,
+    alignSelf: 'stretch',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: 'transparent',
+    borderRadius: 16,
+    overflow: 'hidden',
   },
   header: {
     alignItems: 'center',
@@ -208,9 +437,9 @@ const styles = StyleSheet.create({
   },
   image: {
     width: '100%',
-    height: '50%',
-    resizeMode: 'contain',
     borderRadius: 5,
+    overflow: 'hidden',
+    alignSelf: 'stretch',
   },
   stats: {
     flexDirection: 'row',
@@ -236,26 +465,26 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   coachStats: {
-    flexDirection: 'row', // Allineamento orizzontale delle colonne
-    justifyContent: 'space-evenly', // Spazio equo tra le colonne
+    flexDirection: 'row',
+    justifyContent: 'space-evenly',
     alignItems: 'center',
-    width: '100%', // Occupa l'intera larghezza
-    marginTop: 10, // Spazio sopra le statistiche
+    width: '100%',
+    marginTop: 10,
   },
   bonusColumn: {
-    alignItems: 'center', // Centra il contenuto (label e valore) verticalmente
+    alignItems: 'center',
     justifyContent: 'center',
   },
   playerStats: {
-    flexDirection: 'row', // Allineamento orizzontale
-    justifyContent: 'space-between', // Spazio tra Attack e Defense
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
     width: '100%',
-    marginTop: 4, // Spazio sopra per separare dall'immagine
+    marginTop: 4,
   },
   statColumn: {
-    alignItems: 'center', // Centra i contenuti nella colonna
-    flex: 1, // Ogni colonna occupa il 50% della larghezza
+    alignItems: 'center',
+    flex: 1,
   },
   statLabel: {
     color: '#fff',
@@ -264,7 +493,7 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontWeight: 'bold',
-    color: '#ffd700', // Stesso colore per evidenziare come nelle coach
+    color: '#ffd700',
     textAlign: 'center',
   },
   bonusLabel: {
@@ -275,6 +504,21 @@ const styles = StyleSheet.create({
   bonusValue: {
     fontWeight: 'bold',
     color: '#ffd700',
+    textAlign: 'center',
+  },
+  seasonLabelContainer: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    pointerEvents: 'none',
+  },
+  seasonLabelText: {
+    color: 'rgba(255, 255, 255, 0.85)',
+    fontWeight: '700',
+    letterSpacing: 1.5,
+    transform: [{ rotate: '90deg' }],
     textAlign: 'center',
   },
 });

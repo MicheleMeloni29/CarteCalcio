@@ -25,6 +25,8 @@ interface CardType {
   defenseBonus?: number;
   image_url?: string;
   rarityColor: 'common' | 'rare' | 'epic' | 'legendary';
+  quantity: number;
+  season?: string;
 }
 
 type DropdownKey = 'team' | 'rarity' | 'type';
@@ -51,6 +53,14 @@ const parseOptionalNumber = (value: unknown): number | undefined => {
     }
   }
   return undefined;
+};
+
+const parseQuantity = (value: unknown): number => {
+  const parsed = parseOptionalNumber(value);
+  if (typeof parsed === 'number' && Number.isFinite(parsed)) {
+    return Math.max(1, Math.floor(parsed));
+  }
+  return 1;
 };
 
 const coerceId = (value: unknown, fallback: number): number => {
@@ -150,6 +160,8 @@ export default function CollectionScreen() {
         image_url:
           typeof raw?.image_url === 'string' ? raw.image_url : undefined,
         rarityColor: normalizeRarity(raw?.rarity),
+        quantity: parseQuantity(raw?.quantity),
+        season: typeof raw?.season === 'string' ? raw.season : '24/25.1',
       }));
 
       const coachCards: CardType[] = (Array.isArray(data?.coach_cards)
@@ -170,6 +182,8 @@ export default function CollectionScreen() {
         image_url:
           typeof raw?.image_url === 'string' ? raw.image_url : undefined,
         rarityColor: normalizeRarity(raw?.rarity),
+        quantity: parseQuantity(raw?.quantity),
+        season: typeof raw?.season === 'string' ? raw.season : '24/25.1',
       }));
 
       const bonusCards: CardType[] = (Array.isArray(data?.bonus_malus_cards)
@@ -190,6 +204,8 @@ export default function CollectionScreen() {
         image_url:
           typeof raw?.image_url === 'string' ? raw.image_url : undefined,
         rarityColor: normalizeRarity(raw?.rarity),
+        quantity: parseQuantity(raw?.quantity),
+        season: typeof raw?.season === 'string' ? raw.season : '24/25.1',
       }));
 
       setCards([...playerCards, ...coachCards, ...bonusCards]);
@@ -361,21 +377,27 @@ export default function CollectionScreen() {
 
     return (
       <TouchableOpacity onPress={() => setSelectedCard(item)}>
-        <Card
-          size="small"
-          type={item.type}
-          name={item.name}
-          team={item.team}
-          attack={item.attack}
-          defense={item.defense}
-          abilities={item.abilities}
-          effect={item.effect}
+        <View style={styles.cardWrapper}>
+          <Card
+            size="small"
+            type={item.type}
+            name={item.name}
+            team={item.team}
+            attack={item.attack}
+            defense={item.defense}
+            abilities={item.abilities}
+            effect={item.effect}
           duration={item.duration}
           attackBonus={item.attackBonus}
           defenseBonus={item.defenseBonus}
           image={imageSource}
           rarity={item.rarityColor}
+          season={item.season}
         />
+          <View style={styles.quantityBadge}>
+            <Text style={styles.quantityBadgeText}>{`x${item.quantity}`}</Text>
+          </View>
+        </View>
       </TouchableOpacity>
     );
   };
@@ -534,7 +556,8 @@ export default function CollectionScreen() {
         {selectedCard && (
           <Modal transparent={true} animationType="fade" visible={!!selectedCard}>
             <View style={styles.modalContainer}>
-              <Card
+              <View style={styles.modalCardWrapper}>
+                <Card
                 size="large"
                 type={selectedCard.type}
                 name={selectedCard.name}
@@ -546,14 +569,23 @@ export default function CollectionScreen() {
                 duration={selectedCard.duration}
                 attackBonus={selectedCard.attackBonus}
                 defenseBonus={selectedCard.defenseBonus}
-                image={{ uri: selectedCard.image_url }}
+                image={
+                  selectedCard.image_url
+                    ? { uri: selectedCard.image_url }
+                    : require('../../assets/images/Backgrounds/CollectionBackground.jpg')
+                }
                 rarity={selectedCard.rarityColor} // Passa il colore della rarità come prop "rarity"
+                season={selectedCard.season}
               />
+                <View style={styles.modalQuantityBadge}>
+                  <Text style={styles.modalQuantityBadgeText}>{`x${selectedCard.quantity}`}</Text>
+                </View>
+              </View>
               <TouchableOpacity
-                style={styles.backButton}
+                style={styles.exitButton}
                 onPress={() => setSelectedCard(null)}
               >
-                <Text style= {styles.backButtonText}>Exit</Text>
+                <Text style={styles.backButtonText}>Exit</Text>
               </TouchableOpacity>
             </View>
           </Modal>
@@ -610,9 +642,22 @@ const styles = StyleSheet.create({
     minHeight: 40,
     alignSelf: 'stretch',
   },
+  exitButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(15, 15, 19, 0.65)',
+    borderColor: 'rgba(0, 160, 40, 1)',
+    borderWidth: 2,
+    borderRadius: 14,
+    paddingVertical: 8,
+    paddingHorizontal: 22,
+    minHeight: 40,
+    marginTop: 20,
+  },
   backButtonText :{
     color: '#00a028ff',
-    fontSize: 16,
+    fontSize: 20,
     fontWeight: '700',
 },
   backLabel: {
@@ -715,6 +760,25 @@ const styles = StyleSheet.create({
     paddingVertical: 22,
     alignItems: 'center',
   },
+  cardWrapper: {
+    position: 'relative',
+  },
+  quantityBadge: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    backgroundColor: 'rgba(15, 15, 19, 0.85)',
+    borderRadius: 16,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderWidth: 1,
+    borderColor: '#00a028ff',
+  },
+  quantityBadgeText: {
+    color: '#f9fafb',
+    fontSize: 12,
+    fontWeight: '700',
+  },
   list: {
     flex: 1,
   },
@@ -733,6 +797,26 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'rgba(0, 0, 0, 0.8)',
+  },
+  modalCardWrapper: {
+    position: 'relative',
+    alignItems: 'center',
+  },
+  modalQuantityBadge: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    borderRadius: 20,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: '#00a028ff',
+  },
+  modalQuantityBadgeText: {
+    color: '#f9fafb',
+    fontSize: 16,
+    fontWeight: '700',
   },
   closeButton: {
     marginTop: 20,

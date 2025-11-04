@@ -1,9 +1,11 @@
+from django.contrib.contenttypes.models import ContentType
+from django.db.models import Count
+from django.shortcuts import get_object_or_404
 from rest_framework import permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from django.shortcuts import get_object_or_404
 
-from .models import Pack
+from .models import Pack, PackPurchaseCard
 from .serializers import (
     PackSerializer,
     serialize_collection_card,
@@ -14,7 +16,7 @@ from .services import (
     NoAvailableCardsError,
     open_pack_for_user,
 )
-from cards.models import UserCollection
+from cards.models import BonusMalusCard, CoachCard, PlayerCard, UserCollection
 
 
 class PackListView(APIView):
@@ -67,18 +69,55 @@ class UserCollectionView(APIView):
     def get(self, request):
         collection, _ = UserCollection.objects.get_or_create(user=request.user)
 
+        player_cards = list(collection.player_cards.select_related("rarity").all())
+        coach_cards = list(collection.coach_cards.select_related("rarity").all())
+        bonus_cards = list(collection.bonus_malus_cards.select_related("rarity").all())
+
+        def build_counts(model, ids):
+            if not ids:
+                return {}
+            content_type = ContentType.objects.get_for_model(model)
+            aggregated = (
+                PackPurchaseCard.objects.filter(
+                    purchase__user=request.user,
+                    content_type=content_type,
+                    object_id__in=ids,
+                )
+                .values("object_id")
+                .annotate(total=Count("id"))
+            )
+            return {row["object_id"]: row["total"] for row in aggregated}
+
+        player_counts = build_counts(PlayerCard, [card.pk for card in player_cards])
+        coach_counts = build_counts(CoachCard, [card.pk for card in coach_cards])
+        bonus_counts = build_counts(
+            BonusMalusCard, [card.pk for card in bonus_cards]
+        )
+
         payload = {
             "player_cards": [
-                serialize_collection_card(card, request=request)
-                for card in collection.player_cards.select_related("rarity").all()
+                serialize_collection_card(
+                    card,
+                    request=request,
+                    quantity=player_counts.get(card.pk),
+                )
+                for card in player_cards
             ],
             "coach_cards": [
-                serialize_collection_card(card, request=request)
-                for card in collection.coach_cards.select_related("rarity").all()
+                serialize_collection_card(
+                    card,
+                    request=request,
+                    quantity=coach_counts.get(card.pk),
+                )
+                for card in coach_cards
             ],
             "bonus_malus_cards": [
-                serialize_collection_card(card, request=request)
-                for card in collection.bonus_malus_cards.select_related("rarity").all()
+                serialize_collection_card(
+                    card,
+                    request=request,
+                    quantity=bonus_counts.get(card.pk),
+                )
+                for card in bonus_cards
             ],
         }
 

@@ -140,6 +140,7 @@ const ShopScreen: React.FC = () => {
           defense_bonus: typeof record.defense_bonus === 'number' ? record.defense_bonus : null,
           effect: typeof record.effect === 'string' ? record.effect : null,
           duration: typeof record.duration === 'number' ? record.duration : null,
+          season: typeof record.season === 'string' ? record.season : null,
         } as OpenedPackCard;
       })
       .filter((value): value is OpenedPackCard => value !== null);

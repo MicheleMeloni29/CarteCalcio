@@ -49,8 +49,21 @@ const DEFAULT_THEME_DETAIL: ThemeDetail = {
   completionMultiplier: 10,
 };
 
-const normalizeThemeSlug = (slug?: string) =>
-  slug?.toLowerCase().replace(/[/_]/g, '-') ?? '';
+const normalizeThemeSlug = (slug?: string) => {
+  if (!slug) {
+    return '';
+  }
+  const sanitized = slug
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+  const seasonMatch = sanitized.match(/^(season)-?(\d{2})-?(\d{2})$/);
+  if (seasonMatch) {
+    return `${seasonMatch[1]}${seasonMatch[2]}-${seasonMatch[3]}`;
+  }
+  return sanitized;
+};
 
 const THEME_DETAILS: Record<string, ThemeDetail> = {
   stadiums: {
@@ -68,20 +81,10 @@ const THEME_DETAILS: Record<string, ThemeDetail> = {
     negativePenalty: 5,
     completionMultiplier: 15,
   },
-  'top_scorer': {
-    positiveReward: 15,
-    negativePenalty: 5,
-    completionMultiplier: 15,
-  },
   records: {
     positiveReward: 20,
     negativePenalty: 5,
     completionMultiplier: 20,
-  },
-  'season24/25': {
-    positiveReward: 30,
-    negativePenalty: 15,
-    completionMultiplier: 30,
   },
   'season24-25': {
     positiveReward: 30,
@@ -110,7 +113,7 @@ const EarnScreen: React.FC = () => {
 
   const orderedThemes = useMemo(() => {
     const isSeasonSlug = (slug: string | undefined) =>
-      typeof slug === 'string' && slug.toLowerCase().startsWith('season24');
+      normalizeThemeSlug(slug).startsWith('season24');
 
     return [...themes].sort((a, b) => {
       if (a.slug === 'stadiums' && b.slug !== 'stadiums') {
