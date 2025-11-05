@@ -315,14 +315,14 @@ const QuizPlayScreen: React.FC = () => {
         <View style={styles.loaderContainer}>
           <Text style={styles.errorText}>{error}</Text>
           <TouchableOpacity style={styles.retryButton} onPress={fetchQuestions}>
-            <Text style={styles.retryLabel}>Riprova</Text>
+            <Text style={styles.retryLabel}>Try again</Text>
           </TouchableOpacity>
         </View>
       ) : !currentQuestion ? (
         <View style={styles.loaderContainer}>
-          <Text style={styles.emptyText}>Nessuna domanda disponibile.</Text>
+              <Text style={styles.emptyText}>No questions available.</Text>
           <TouchableOpacity style={styles.retryButton} onPress={fetchQuestions}>
-            <Text style={styles.retryLabel}>Aggiorna</Text>
+            <Text style={styles.retryLabel}>Update</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -370,13 +370,13 @@ const QuizPlayScreen: React.FC = () => {
             disabled={selectedAnswerId === null || isAwarding}
           >
             <Text style={styles.primaryLabel}>
-              {currentIndex >= questions.length - 1 ? 'Completa' : 'Prossima domanda'}
+                    {currentIndex >= questions.length - 1 ? 'Complete' : 'Next question'}
             </Text>
           </TouchableOpacity>
 
           {selectedAnswerId !== null ? (
             <Text style={selectedIsCorrect ? styles.feedbackPositive : styles.feedbackNegative}>
-              {selectedIsCorrect ? 'Risposta corretta!' : 'Risposta errata.'}
+                    {selectedIsCorrect ? 'Correct answer!' : 'Wrong answer'}
             </Text>
           ) : null}
         </ScrollView>

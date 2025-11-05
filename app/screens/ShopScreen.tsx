@@ -356,7 +356,7 @@ const ShopScreen: React.FC = () => {
           disabled={availableCredits < item.price || disabled}
         >
           <Text style={styles.purchaseLabel}>
-            {processingId === item.id ? 'Acquisto...' : 'Acquista'}
+            {processingId === item.id ? 'Purchase...' : 'Buy now'}
           </Text>
         </TouchableOpacity>
       </View>

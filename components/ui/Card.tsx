@@ -62,7 +62,11 @@ const rarityColors: Record<Exclude<CardProps['rarity'], undefined>, string> = {
   legendary: '#35ffb3',
 };
 
-const rarityBorderGradients: Partial<Record<Exclude<CardProps['rarity'], undefined>, string[]>> = {
+type GradientTuple = readonly [string, string, ...string[]];
+
+const rarityBorderGradients: Partial<
+  Record<Exclude<CardProps['rarity'], undefined>, GradientTuple>
+> = {
   rare: [
     '#D8DEE9',  // silver chiaro
     '#bac1c5ff',  // silver medio
@@ -76,7 +80,7 @@ const rarityBorderGradients: Partial<Record<Exclude<CardProps['rarity'], undefin
     '#bac1c5ff',  // silver medio
     '#9a9fa1ff',  // leggero riflesso
     '#71797cff',  // ripetizione media
-  ],
+  ] as const,
   epic: [
     '#FFF4C2', // highlight oro chiaro
     '#f6e592ff', // highlight giallo
@@ -94,7 +98,7 @@ const rarityBorderGradients: Partial<Record<Exclude<CardProps['rarity'], undefin
     '#f6e592ff', // highlight giallo
     '#F0C859', // oro principale di ritorno
     '#D4A017', // ombra finale
-  ],
+  ] as const,
   legendary: [
     '#C6FFE9', // highlight magico
     '#3AFFB8', // smeraldo brillante
@@ -118,7 +122,7 @@ const rarityBorderGradients: Partial<Record<Exclude<CardProps['rarity'], undefin
     '#0A7A55', // profondità
     '#16C98D', // ritorno al verde prezioso
     '#3AFFB8', // secondo smeraldo
-  ],
+  ] as const,
 };
 
 
@@ -247,6 +251,10 @@ const CardComponent: React.FC<CardProps> = ({
   const borderGradient = rarityBorderGradients[normalizedRarity];
   const glowStyle = rarityGlowStyles[normalizedRarity];
   const seasonLabel = typeof season === 'string' && season.trim().length > 0 ? season.trim() : null;
+  const seasonLabelUpper = useMemo(
+    () => (seasonLabel ? seasonLabel.toUpperCase() : null),
+    [seasonLabel],
+  );
   const seasonFontScale =
     size === 'large' ? 0.75 : size === 'medium' ? 0.78 : 0.82;
 
@@ -270,13 +278,13 @@ const CardComponent: React.FC<CardProps> = ({
         },
       ]}
     >
-      {seasonLabel && (
+      {seasonLabelUpper && (
         <View
           pointerEvents="none"
           style={[
             styles.seasonLabelContainer,
             {
-              right: Math.max(containerPadding * 0.2, 2),
+              right: - containerPadding,
             },
           ]}
         >
@@ -285,11 +293,11 @@ const CardComponent: React.FC<CardProps> = ({
               styles.seasonLabelText,
               {
                 fontSize: cardStyle.fontSize * seasonFontScale,
+                lineHeight: cardStyle.fontSize * seasonFontScale * 1.05,
               },
             ]}
-            numberOfLines={1}
           >
-            {seasonLabel.toUpperCase()}
+            {seasonLabelUpper}
           </Text>
         </View>
       )}
@@ -517,9 +525,10 @@ const styles = StyleSheet.create({
   seasonLabelText: {
     color: 'rgba(255, 255, 255, 0.85)',
     fontWeight: '700',
-    letterSpacing: 1.5,
-    transform: [{ rotate: '90deg' }],
+    letterSpacing: 1.2,
     textAlign: 'center',
+    includeFontPadding: false,
+    transform: [{ rotate: '-90deg' }],
   },
 });
 

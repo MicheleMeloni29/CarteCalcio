@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   View,
   useWindowDimensions,
+  type FlexStyle,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
@@ -97,9 +98,11 @@ const PackOpenScreen: React.FC = () => {
     const stackBaseTop = Math.max(stackHeight * 0.08, 28);
     const stackLayerOffset = Math.max(stackHeight * 0.04, 12);
     const sectionSpacing = Math.max(18, windowHeight * 0.03);
-    const buttonHeight = Math.max(48, Math.min(60, windowHeight * 0.085));
-    const buttonsGap = Math.max(14, windowHeight * 0.025);
-    const buttonFontSize = Math.min(18, Math.max(15, windowWidth * 0.045));
+    const buttonHeight = Math.max(36, Math.min(46, windowHeight * 0.06));
+    const buttonsGap = Math.max(10, windowHeight * 0.02);
+    const buttonFontSize = Math.min(16, Math.max(13, windowWidth * 0.048));
+    const shouldStackActions = windowWidth < 420;
+    const buttonHorizontalPadding = Math.max(12, Math.min(18, windowWidth * 0.045));
 
     return {
       basePaddingHorizontal,
@@ -114,6 +117,8 @@ const PackOpenScreen: React.FC = () => {
       buttonHeight,
       buttonsGap,
       buttonFontSize,
+      shouldStackActions,
+      buttonHorizontalPadding,
     };
   }, [windowHeight, windowWidth]);
 
@@ -176,12 +181,13 @@ const PackOpenScreen: React.FC = () => {
     () => [
       styles.actionsRow,
       {
-        marginTop: responsive.sectionSpacing * 0.6,
-        marginBottom: responsive.sectionSpacing,
+        marginTop: responsive.sectionSpacing * 0.2,
+        marginBottom: responsive.sectionSpacing * 0.4,
         gap: responsive.buttonsGap,
+        flexDirection: (responsive.shouldStackActions ? 'column' : 'row') as FlexStyle['flexDirection'],
       },
     ],
-    [responsive.buttonsGap, responsive.sectionSpacing],
+    [responsive.buttonsGap, responsive.sectionSpacing, responsive.shouldStackActions],
   );
 
   const primaryButtonStyle = useMemo(
@@ -189,10 +195,17 @@ const PackOpenScreen: React.FC = () => {
       styles.primaryButton,
       {
         minHeight: responsive.buttonHeight,
-        paddingVertical: Math.max(12, responsive.buttonHeight * 0.35),
+        paddingVertical: Math.max(10, responsive.buttonHeight * 0.32),
+        paddingHorizontal: responsive.buttonHorizontalPadding,
+        flex: responsive.shouldStackActions ? undefined : 1,
+        minWidth: 0,
       },
     ],
-    [responsive.buttonHeight],
+    [
+      responsive.buttonHeight,
+      responsive.buttonHorizontalPadding,
+      responsive.shouldStackActions,
+    ],
   );
 
   const primaryButtonLabelStyle = useMemo(
@@ -208,10 +221,17 @@ const PackOpenScreen: React.FC = () => {
       styles.secondaryButton,
       {
         minHeight: responsive.buttonHeight,
-        paddingVertical: Math.max(12, responsive.buttonHeight * 0.35),
+        paddingVertical: Math.max(10, responsive.buttonHeight * 0.32),
+        paddingHorizontal: responsive.buttonHorizontalPadding,
+        flex: responsive.shouldStackActions ? undefined : 1,
+        minWidth: 0,
       },
     ],
-    [responsive.buttonHeight],
+    [
+      responsive.buttonHeight,
+      responsive.buttonHorizontalPadding,
+      responsive.shouldStackActions,
+    ],
   );
 
   const secondaryButtonLabelStyle = useMemo(
@@ -476,10 +496,11 @@ const PackOpenScreen: React.FC = () => {
       const fallbackVector = { dx: -1, dy: 0 };
       const inputVector = vector ?? fallbackVector;
       const length = Math.hypot(inputVector.dx, inputVector.dy);
+      const fallbackNormalized = { x: fallbackVector.dx, y: fallbackVector.dy };
       const normalized =
         length > 0.001
           ? { x: inputVector.dx / length, y: inputVector.dy / length }
-          : fallbackVector;
+          : fallbackNormalized;
       const exitDistance = Math.max(windowWidth, windowHeight) + cardWidth + 64;
 
       Animated.parallel([
@@ -752,7 +773,7 @@ const PackOpenScreen: React.FC = () => {
           accessibilityLabel="Vai alla collezione"
           accessibilityHint="Apri la schermata della collezione carte"
         >
-          <Text style={primaryButtonLabelStyle}>Vai alla collezione</Text>
+          <Text style={primaryButtonLabelStyle}>Go to collection</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={secondaryButtonStyle}
@@ -762,7 +783,7 @@ const PackOpenScreen: React.FC = () => {
           accessibilityLabel="Apri un altro pacchetto"
           accessibilityHint="Ritorna allo shop per aprire un nuovo pacchetto"
         >
-          <Text style={secondaryButtonLabelStyle}>Apri un altro pack</Text>
+          <Text style={secondaryButtonLabelStyle}>Open another pack</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -829,29 +850,42 @@ const styles = StyleSheet.create({
     paddingVertical: 40,
   },
   actionsRow: {
+    width: '100%',
+    alignSelf: 'stretch',
+    alignItems: 'stretch',
     marginTop: 0,
     marginBottom: 0,
     gap: 0,
   },
   primaryButton: {
     backgroundColor: '#00a028ff',
-    borderRadius: 12,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
+    alignSelf: 'stretch',
+    shadowColor: '#00a028ff',
+    shadowOpacity: 0.28,
+    shadowOffset: { width: 0, height: 6 },
+    shadowRadius: 12,
+    elevation: 4,
   },
   primaryButtonLabel: {
     fontWeight: '700',
     color: '#0e0c0f',
+    textAlign: 'center',
   },
   secondaryButton: {
-    borderRadius: 12,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
+    alignSelf: 'stretch',
     borderWidth: 1,
     borderColor: '#00a028ff',
+    backgroundColor: 'rgba(0, 160, 40, 0.12)',
   },
   secondaryButtonLabel: {
     fontWeight: '600',
     color: '#00a028ff',
+    textAlign: 'center',
   },
 });

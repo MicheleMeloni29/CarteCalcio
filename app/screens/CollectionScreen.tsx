@@ -548,7 +548,7 @@ export default function CollectionScreen() {
           }}
           ListEmptyComponent={
             <Text style={styles.emptyMessage}>
-              Nessuna carta trovata con i filtri selezionati.
+              No cards found
             </Text>
           }
         />
@@ -787,10 +787,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   emptyMessage: {
-    fontSize: 16,
-    color: '#4b5563',
+    fontSize: 32,
+    color: '#cbcbcbff',
     textAlign: 'center',
-    paddingVertical: 40,
+    fontWeight: '600',
   },
   modalContainer: {
     flex: 1,
