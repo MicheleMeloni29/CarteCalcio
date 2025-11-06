@@ -5,6 +5,7 @@ from django.conf.urls.static import static
 
 urlpatterns = [
     path('player/', views.player_cards_list, name='player_cards_list'),  # Carte giocatore
+    path('goalkeeper/', views.goalkeeper_cards_list, name='goalkeeper_cards_list'),  # Carte portiere
     path('coach/', views.coach_cards_list, name='coach_cards_list'),  # Carte allenatore
     path('bonus_malus/', views.bonus_malus_cards_list, name='bonus_malus_cards_list'),  # Carte bonus/malus
     path('all/', views.all_cards_list, name='all_cards_list'),  # Tutte le carte

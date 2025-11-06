@@ -73,6 +73,29 @@ class PlayerCard(models.Model):
     def __str__(self):
         return f"{self.name} - {self.rarity}"
 
+# Goalkeeper cards: like player card but with "save" attribute instead of "attack" and "defense"
+class GoalkeeperCard(models.Model):
+    name = models.CharField(max_length=100)
+    team = models.CharField(
+        max_length=20, 
+        choices=TEAMS, 
+        default="BERGAMO"
+    )
+    season = models.CharField(max_length=20, default="24/25.1")
+    saves = models.IntegerField(verbose_name="saves (%)")
+    abilities = models.TextField(blank=True, null=True)
+    image = models.ImageField(upload_to="goalkeeper_images/")
+    rarity = models.ForeignKey(
+        CardRarity, on_delete=models.CASCADE, related_name="goalkeeper_cards"
+    )
+
+    def image_url(self):
+        if self.image:
+            return f"{settings.DOMAIN_NAME}{settings.MEDIA_URL}{self.image.name}"
+        return None
+
+    def __str__(self):
+        return f"{self.name} - {self.rarity}"
 
 # Coach cards: cards that can have positive effects on the team
 class CoachCard(models.Model):
@@ -114,6 +137,7 @@ class UserCollection(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="collection"
     )
     player_cards = models.ManyToManyField(PlayerCard, related_name="owned_by_users" ,blank=True)
+    goalkeeper_cards = models.ManyToManyField(GoalkeeperCard, related_name="owned_by_users", blank=True)
     coach_cards = models.ManyToManyField(CoachCard, related_name="owned_by_users", blank=True)
     bonus_malus_cards = models.ManyToManyField(BonusMalusCard, related_name="owned_by_users", blank=True)
 
@@ -129,6 +153,7 @@ class UserDeck(models.Model):
 
     name = models.CharField(max_length=100)
     player_cards = models.ManyToManyField(PlayerCard, related_name="decks", blank=True)
+    goalkeeper_cards = models.ManyToManyField(GoalkeeperCard, related_name="decks", blank=True)
     coach_cards = models.ManyToManyField(CoachCard, related_name="decks", blank=True)
     bonus_malus_cards = models.ManyToManyField(BonusMalusCard, related_name="decks", blank=True)
 
@@ -136,6 +161,7 @@ class UserDeck(models.Model):
         """Validation for limit total cards in a deck"""
         total_cards = (
             self.player_cards.count() + 
+            self.goalkeeper_cards.count() +
             self.coach_cards.count() + 
             self.bonus_malus_cards.count()
         )

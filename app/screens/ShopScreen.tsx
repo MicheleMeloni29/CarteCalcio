@@ -135,6 +135,7 @@ const ShopScreen: React.FC = () => {
           team: typeof record.team === 'string' ? record.team : null,
           attack: typeof record.attack === 'number' ? record.attack : null,
           defense: typeof record.defense === 'number' ? record.defense : null,
+          save: typeof record.save === 'number' ? record.save : null,
           abilities: typeof record.abilities === 'string' ? record.abilities : null,
           attack_bonus: typeof record.attack_bonus === 'number' ? record.attack_bonus : null,
           defense_bonus: typeof record.defense_bonus === 'number' ? record.defense_bonus : null,

@@ -9,7 +9,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
 from django.db.models import F, QuerySet
 
-from cards.models import BonusMalusCard, CoachCard, PlayerCard, UserCollection
+from cards.models import BonusMalusCard, CoachCard, GoalkeeperCard, PlayerCard, UserCollection
 
 from .models import Pack, PackPurchase, PackPurchaseCard, PackRarityWeight
 
@@ -52,6 +52,7 @@ class OpenedCard:
 
 CARD_MODEL_MAP: Tuple[Tuple[str, Type], ...] = (
     ("player", PlayerCard),
+    ("goalkeeper", GoalkeeperCard),
     ("coach", CoachCard),
     ("bonus", BonusMalusCard),
 )
@@ -162,6 +163,8 @@ def open_pack_for_user(user, pack: Pack) -> Tuple[PackPurchase, List[OpenedCard]
 
         if card_label == "player":
             collection.player_cards.add(card)
+        elif card_label == "goalkeeper":
+            collection.goalkeeper_cards.add(card)
         elif card_label == "coach":
             collection.coach_cards.add(card)
         else:

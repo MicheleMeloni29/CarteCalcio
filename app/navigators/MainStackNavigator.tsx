@@ -28,6 +28,7 @@ export type OpenedPackCard = {
     team?: string | null;
     attack?: number | null;
     defense?: number | null;
+    save?: number | null;
     abilities?: string | null;
     attack_bonus?: number | null;
     defense_bonus?: number | null;

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import PlayerCard, CoachCard, BonusMalusCard, CardRarity
+from .models import PlayerCard, GoalkeeperCard, CoachCard, BonusMalusCard, CardRarity
 
 @admin.register(CardRarity)
 class CardRarityAdmin(admin.ModelAdmin):
@@ -9,6 +9,12 @@ class CardRarityAdmin(admin.ModelAdmin):
 @admin.register(PlayerCard)
 class PlayerCardAdmin(admin.ModelAdmin):
     list_display = ('name', 'team', 'rarity', 'attack', 'defense')
+    list_filter = ('rarity',)
+
+
+@admin.register(GoalkeeperCard)
+class GoalkeeperCardAdmin(admin.ModelAdmin):
+    list_display = ('name', 'team', 'rarity', 'saves')
     list_filter = ('rarity',)
 
 

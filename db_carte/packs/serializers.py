@@ -2,7 +2,7 @@ from typing import Any, Dict, List, Optional
 
 from rest_framework import serializers
 
-from cards.models import BonusMalusCard, CoachCard, PlayerCard
+from cards.models import BonusMalusCard, CoachCard, GoalkeeperCard, PlayerCard
 
 from .models import Pack
 from .services import OpenedCard
@@ -66,6 +66,8 @@ def serialize_collection_card(
 ) -> Dict[str, Any]:
     if isinstance(card, PlayerCard):
         card_type = "player"
+    elif isinstance(card, GoalkeeperCard):
+        card_type = "goalkeeper"
     elif isinstance(card, CoachCard):
         card_type = "coach"
     else:
@@ -101,6 +103,14 @@ def _serialize_card_payload(card, card_type: str, rarity_name: Optional[str], re
                 "team": card.team,
                 "attack": card.attack,
                 "defense": card.defense,
+                "abilities": card.abilities,
+            }
+        )
+    elif isinstance(card, GoalkeeperCard):
+        base_payload.update(
+            {
+                "team": card.team,
+                "save": card.saves,
                 "abilities": card.abilities,
             }
         )

@@ -5,11 +5,12 @@ import { LinearGradient } from 'expo-linear-gradient';
 // Cards component
 interface CardProps {
   size?: 'small' | 'medium' | 'large';
-  type: 'player' | 'coach' | 'bonusMalus';
+  type: 'player' | 'goalkeeper' | 'coach' | 'bonusMalus';
   name: string;
   team?: string;
   attack?: number;
   defense?: number;
+  save?: number;
   abilities?: string;
   effect?: string;
   duration?: number;
@@ -19,6 +20,7 @@ interface CardProps {
   image?: { uri: string } | number | null;
   rarity?: 'common' | 'rare' | 'epic' | 'legendary'; // Usa rarità come chiave
   season?: string | null;
+  collectionNumber?: number | string;
 }
 
 const FALLBACK_IMAGE_URI =
@@ -170,10 +172,12 @@ const CardComponent: React.FC<CardProps> = ({
   duration,
   attackBonus,
   defenseBonus,
+  save,
   imageScale,
   image,
   rarity = 'common',
   season,
+  collectionNumber,
 }) => {
   const sizes = {
     small: { width: 80, height: 120, fontSize: 2.8, padding: 2.8, borderWidth: 5.6 },
@@ -305,6 +309,11 @@ const CardComponent: React.FC<CardProps> = ({
       <View style={styles.header}>
         <Text style={[styles.name, { fontSize: cardStyle.fontSize * 1.2 }]}>{name}</Text>
         {team && <Text style={[styles.team, { fontSize: cardStyle.fontSize }]}>{team}</Text>}
+        {type === 'goalkeeper' && collectionNumber !== undefined && collectionNumber !== null && (
+          <Text style={[styles.collectionNumber, { fontSize: cardStyle.fontSize * 0.8 }]}>
+            #{collectionNumber}
+          </Text>
+        )}
       </View>
       {/* Immagine */}
       <Image
@@ -341,6 +350,18 @@ const CardComponent: React.FC<CardProps> = ({
             </Text>
             <Text style={[styles.statValue, { fontSize: cardStyle.fontSize * 1.1 }]}>
               {defense}
+            </Text>
+          </View>
+        </View>
+      )}
+      {type === 'goalkeeper' && (
+        <View style={styles.goalkeeperStats}>
+          <View style={styles.statColumn}>
+            <Text style={[styles.statLabel, { fontSize: cardStyle.fontSize * 0.8 }]}>
+              Saves
+            </Text>
+            <Text style={[styles.statValue, { fontSize: cardStyle.fontSize * 1.1 }]}>
+              {typeof save === 'number' ? `${save}%` : '--%'}
             </Text>
           </View>
         </View>
@@ -443,6 +464,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 2,
   },
+  collectionNumber: {
+    color: '#9be7ff',
+    textAlign: 'center',
+    marginTop: 2,
+    fontWeight: '600',
+  },
   image: {
     width: '100%',
     borderRadius: 5,
@@ -486,6 +513,13 @@ const styles = StyleSheet.create({
   playerStats: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+    marginTop: 4,
+  },
+  goalkeeperStats: {
+    flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
     width: '100%',
     marginTop: 4,

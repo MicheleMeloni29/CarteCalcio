@@ -451,8 +451,14 @@ const PackOpenScreen: React.FC = () => {
   }, []);
 
   const renderCardContent = useCallback((item: OpenedPackCard) => {
-    const normalizedType: 'player' | 'coach' | 'bonusMalus' =
-      item.type === 'bonus' ? 'bonusMalus' : item.type === 'coach' ? 'coach' : 'player';
+    const normalizedType: 'player' | 'goalkeeper' | 'coach' | 'bonusMalus' =
+      item.type === 'bonus'
+        ? 'bonusMalus'
+        : item.type === 'coach'
+          ? 'coach'
+          : item.type === 'goalkeeper'
+            ? 'goalkeeper'
+            : 'player';
     const imageSource =
       typeof item.image_url === 'string' && item.image_url.length > 0
         ? { uri: item.image_url }
@@ -470,6 +476,7 @@ const PackOpenScreen: React.FC = () => {
         team={item.team ?? undefined}
         attack={item.attack ?? undefined}
         defense={item.defense ?? undefined}
+        save={item.save ?? undefined}
         abilities={item.abilities ?? undefined}
         effect={item.effect ?? undefined}
         duration={item.duration ?? undefined}
@@ -478,6 +485,7 @@ const PackOpenScreen: React.FC = () => {
         image={imageSource}
         rarity={rarity}
         season={item.season ?? undefined}
+        collectionNumber={item.id ?? undefined}
       />
     );
   }, []);

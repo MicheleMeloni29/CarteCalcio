@@ -13,11 +13,12 @@ import type { MainStackParamList } from '../navigators/MainStackNavigator';
 // Definizione dell'interfaccia per il tipo di carta 
 interface CardType {
   id: number;
-  type: 'player' | 'coach' | 'bonusMalus';
+  type: 'player' | 'goalkeeper' | 'coach' | 'bonusMalus';
   name: string;
   team?: string;
   attack?: number;
   defense?: number;
+  save?: number;
   abilities?: string;
   effect?: string;
   duration?: number;
@@ -87,6 +88,7 @@ export default function CollectionScreen() {
   const [activeDropdown, setActiveDropdown] = useState<DropdownKey | null>(null);
   const typeLabels: Record<CardType['type'], string> = {
     player: 'Giocatori',
+    goalkeeper: 'Portieri',
     coach: 'Allenatori',
     bonusMalus: 'Bonus/Malus',
   };
@@ -164,6 +166,29 @@ export default function CollectionScreen() {
         season: typeof raw?.season === 'string' ? raw.season : '24/25.1',
       }));
 
+      const goalkeeperCards: CardType[] = (Array.isArray(data?.goalkeeper_cards)
+        ? data.goalkeeper_cards
+        : []
+      ).map((raw: any, index: number) => ({
+        id: coerceId(raw?.id, index + 500),
+        type: 'goalkeeper',
+        name: typeof raw?.name === 'string' ? raw.name : 'Portiere',
+        team: typeof raw?.team === 'string' ? raw.team : undefined,
+        attack: undefined,
+        defense: undefined,
+        save: parseOptionalNumber(raw?.save),
+        abilities: typeof raw?.abilities === 'string' ? raw.abilities : undefined,
+        effect: undefined,
+        duration: undefined,
+        attackBonus: undefined,
+        defenseBonus: undefined,
+        image_url:
+          typeof raw?.image_url === 'string' ? raw.image_url : undefined,
+        rarityColor: normalizeRarity(raw?.rarity),
+        quantity: parseQuantity(raw?.quantity),
+        season: typeof raw?.season === 'string' ? raw.season : '24/25.1',
+      }));
+
       const coachCards: CardType[] = (Array.isArray(data?.coach_cards)
         ? data.coach_cards
         : []
@@ -208,7 +233,7 @@ export default function CollectionScreen() {
         season: typeof raw?.season === 'string' ? raw.season : '24/25.1',
       }));
 
-      setCards([...playerCards, ...coachCards, ...bonusCards]);
+      setCards([...playerCards, ...goalkeeperCards, ...coachCards, ...bonusCards]);
     } catch (error) {
       console.error('Errore nel recupero della collezione:', error);
       setCards([]);
@@ -245,7 +270,7 @@ export default function CollectionScreen() {
   const typeOptions = useMemo(() => {
     const types = new Set<CardType['type']>();
     cards.forEach(card => types.add(card.type));
-    const order: CardType['type'][] = ['player', 'coach', 'bonusMalus'];
+    const order: CardType['type'][] = ['player', 'goalkeeper', 'coach', 'bonusMalus'];
     return Array.from(types).sort(
       (a, b) => order.indexOf(a) - order.indexOf(b),
     );
@@ -385,15 +410,17 @@ export default function CollectionScreen() {
             team={item.team}
             attack={item.attack}
             defense={item.defense}
+            save={item.save}
             abilities={item.abilities}
             effect={item.effect}
-          duration={item.duration}
-          attackBonus={item.attackBonus}
-          defenseBonus={item.defenseBonus}
-          image={imageSource}
-          rarity={item.rarityColor}
-          season={item.season}
-        />
+            duration={item.duration}
+            attackBonus={item.attackBonus}
+            defenseBonus={item.defenseBonus}
+            image={imageSource}
+            rarity={item.rarityColor}
+            season={item.season}
+            collectionNumber={item.id}
+          />
           <View style={styles.quantityBadge}>
             <Text style={styles.quantityBadgeText}>{`x${item.quantity}`}</Text>
           </View>
@@ -558,25 +585,27 @@ export default function CollectionScreen() {
             <View style={styles.modalContainer}>
               <View style={styles.modalCardWrapper}>
                 <Card
-                size="large"
-                type={selectedCard.type}
-                name={selectedCard.name}
-                team={selectedCard.team}
-                attack={selectedCard.attack}
-                defense={selectedCard.defense}
-                abilities={selectedCard.abilities}
-                effect={selectedCard.effect}
-                duration={selectedCard.duration}
-                attackBonus={selectedCard.attackBonus}
-                defenseBonus={selectedCard.defenseBonus}
-                image={
-                  selectedCard.image_url
-                    ? { uri: selectedCard.image_url }
-                    : require('../../assets/images/Backgrounds/CollectionBackground.jpg')
-                }
-                rarity={selectedCard.rarityColor} // Passa il colore della rarità come prop "rarity"
-                season={selectedCard.season}
-              />
+                  size="large"
+                  type={selectedCard.type}
+                  name={selectedCard.name}
+                  team={selectedCard.team}
+                  attack={selectedCard.attack}
+                  defense={selectedCard.defense}
+                  save={selectedCard.save}
+                  abilities={selectedCard.abilities}
+                  effect={selectedCard.effect}
+                  duration={selectedCard.duration}
+                  attackBonus={selectedCard.attackBonus}
+                  defenseBonus={selectedCard.defenseBonus}
+                  image={
+                    selectedCard.image_url
+                      ? { uri: selectedCard.image_url }
+                      : require('../../assets/images/Backgrounds/CollectionBackground.jpg')
+                  }
+                  rarity={selectedCard.rarityColor}
+                  season={selectedCard.season}
+                  collectionNumber={selectedCard.id}
+                />
                 <View style={styles.modalQuantityBadge}>
                   <Text style={styles.modalQuantityBadgeText}>{`x${selectedCard.quantity}`}</Text>
                 </View>

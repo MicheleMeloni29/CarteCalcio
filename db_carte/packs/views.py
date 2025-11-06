@@ -16,7 +16,7 @@ from .services import (
     NoAvailableCardsError,
     open_pack_for_user,
 )
-from cards.models import BonusMalusCard, CoachCard, PlayerCard, UserCollection
+from cards.models import BonusMalusCard, CoachCard, GoalkeeperCard, PlayerCard, UserCollection
 
 
 class PackListView(APIView):
@@ -70,6 +70,7 @@ class UserCollectionView(APIView):
         collection, _ = UserCollection.objects.get_or_create(user=request.user)
 
         player_cards = list(collection.player_cards.select_related("rarity").all())
+        goalkeeper_cards = list(collection.goalkeeper_cards.select_related("rarity").all())
         coach_cards = list(collection.coach_cards.select_related("rarity").all())
         bonus_cards = list(collection.bonus_malus_cards.select_related("rarity").all())
 
@@ -89,6 +90,7 @@ class UserCollectionView(APIView):
             return {row["object_id"]: row["total"] for row in aggregated}
 
         player_counts = build_counts(PlayerCard, [card.pk for card in player_cards])
+        goalkeeper_counts = build_counts(GoalkeeperCard, [card.pk for card in goalkeeper_cards])
         coach_counts = build_counts(CoachCard, [card.pk for card in coach_cards])
         bonus_counts = build_counts(
             BonusMalusCard, [card.pk for card in bonus_cards]
@@ -102,6 +104,14 @@ class UserCollectionView(APIView):
                     quantity=player_counts.get(card.pk),
                 )
                 for card in player_cards
+            ],
+            "goalkeeper_cards": [
+                serialize_collection_card(
+                    card,
+                    request=request,
+                    quantity=goalkeeper_counts.get(card.pk),
+                )
+                for card in goalkeeper_cards
             ],
             "coach_cards": [
                 serialize_collection_card(
