@@ -21,6 +21,7 @@ import { Ionicons } from '@expo/vector-icons';
 import TopStatusBar from '../../components/ui/TopStatusBar';
 import { API_BASE_URL } from '../../constants/api';
 import { useCredits } from '../../hooks/CreditProvider';
+import { useAchievements } from '../../hooks/AchievementProvider';
 import type { MainStackParamList } from '../navigators/MainStackNavigator';
 
 type QuizAnswer = {
@@ -88,6 +89,7 @@ const QuizPlayScreen: React.FC = () => {
   const navigation = useNavigation<StackNavigationProp<MainStackParamList, 'QuizPlay'>>();
   const { themeSlug, themeName, initialAnswered = 0, initialCorrect = 0 } = route.params;
   const { adjustCredits } = useCredits();
+  const { recordAnswer, recordQuizCompletion } = useAchievements();
 
   const normalizedThemeSlug = useMemo(
     () => normalizeThemeSlug(themeSlug),
@@ -178,6 +180,11 @@ const QuizPlayScreen: React.FC = () => {
 
       const normalizedAnswered = Math.min(finalAnswered, questions.length);
       const normalizedCorrect = Math.min(finalCorrect, questions.length);
+      if (questions.length > 0 && normalizedAnswered >= questions.length) {
+        recordQuizCompletion().catch(error =>
+          console.error('Unable to record completed quiz achievement', error),
+        );
+      }
       navigation.navigate('Earn', {
         progressUpdate: {
           slug: themeSlug,
@@ -187,7 +194,7 @@ const QuizPlayScreen: React.FC = () => {
         },
       });
     },
-    [navigation, questions.length, themeSlug],
+    [navigation, questions.length, recordQuizCompletion, themeSlug],
   );
 
   const handleExit = useCallback(() => {
@@ -220,6 +227,9 @@ const QuizPlayScreen: React.FC = () => {
           ? rewardConfig.correct
           : -rewardConfig.wrong;
         await adjustCredits(delta);
+        recordAnswer(answer.is_correct).catch(error =>
+          console.error('Unable to update achievements from answer', error),
+        );
         initialAnsweredRef.current = nextAnswered;
         initialCorrectRef.current = nextCorrect;
       } catch (err) {
@@ -247,6 +257,7 @@ const QuizPlayScreen: React.FC = () => {
       questions.length,
       rewardConfig,
       selectedAnswerId,
+      recordAnswer,
     ],
   );
 

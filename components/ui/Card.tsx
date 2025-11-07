@@ -222,6 +222,12 @@ const CardComponent: React.FC<CardProps> = ({
 
   const containerPadding = cardStyle.padding;
   const containerBorderWidth = cardStyle.borderWidth;
+  const extraBottomPadding =
+    size === 'small'
+      ? cardStyle.height * 0.075
+      : size === 'medium'
+        ? cardStyle.height * 0.055
+        : cardStyle.height * 0.035;
 
   const isStaticResource = typeof image === 'number';
   const providedRemoteUri = isRemoteImage(image) ? image.uri : null;
@@ -279,6 +285,7 @@ const CardComponent: React.FC<CardProps> = ({
         {
           borderRadius: cardStyle.width / 8,
           padding: containerPadding,
+          paddingBottom: containerPadding + extraBottomPadding,
         },
       ]}
     >
@@ -368,7 +375,15 @@ const CardComponent: React.FC<CardProps> = ({
       )}
       {/* Bonus Coach */}
       {type === 'coach' && (
-        <View style={styles.coachStats}>
+        <View
+          style={[
+            styles.coachStats,
+            {
+              marginTop: size === 'small' ? cardStyle.height * 0.01 : cardStyle.height * 0.04,
+              marginBottom: size === 'small' ? cardStyle.height * 0.12 : cardStyle.height * 0.05,
+            },
+          ]}
+        >
           <View style={styles.bonusColumn}>
             <Text style={[styles.bonusLabel, { fontSize: cardStyle.fontSize * 0.8 }]}>
               Attack Bonus

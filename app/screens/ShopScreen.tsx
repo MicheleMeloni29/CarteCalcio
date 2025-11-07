@@ -381,7 +381,7 @@ const ShopScreen: React.FC = () => {
         </TouchableOpacity>
         <View style={styles.balanceCard}>
           <Text style={styles.subtitle}>
-            Complete quiz to earn more credits
+            Open pack to find new cards
           </Text>
         </View>
       </View>

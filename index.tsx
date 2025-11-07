@@ -5,6 +5,7 @@ import { View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from './hooks/AuthProvider';
 import { CreditProvider } from './hooks/CreditProvider';
+import { AchievementProvider } from './hooks/AchievementProvider';
 import AuthStackNavigator from './app/navigators/AuthStackNavigation';
 import MainStackNavigator from './app/navigators/MainStackNavigator';
 
@@ -23,7 +24,9 @@ function App() {
         <AuthProvider>
             <SafeAreaProvider>
                 <CreditProvider>
-                    <AppNavigator />
+                    <AchievementProvider>
+                        <AppNavigator />
+                    </AchievementProvider>
                 </CreditProvider>
             </SafeAreaProvider>
         </AuthProvider>
