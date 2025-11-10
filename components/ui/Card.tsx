@@ -194,9 +194,9 @@ const CardComponent: React.FC<CardProps> = ({
       marginBottom: cardStyle.height * 0.06,
     },
     medium: {
-      heightScale: 0.7,
-      marginTop: -cardStyle.height * 0.02,
-      marginBottom: cardStyle.height * 0.035,
+      heightScale: 0.66,
+      marginTop: -cardStyle.height * 0.015,
+      marginBottom: cardStyle.height * 0.02,
     },
     small: {
       heightScale: 0.62,
@@ -228,6 +228,12 @@ const CardComponent: React.FC<CardProps> = ({
       : size === 'medium'
         ? cardStyle.height * 0.055
         : cardStyle.height * 0.035;
+  const statsBottomSpacing =
+    size === 'small'
+      ? cardStyle.height * 0.02
+      : size === 'medium'
+        ? cardStyle.height * 0.035
+        : cardStyle.height * 0.02;
 
   const isStaticResource = typeof image === 'number';
   const providedRemoteUri = isRemoteImage(image) ? image.uri : null;
@@ -342,7 +348,7 @@ const CardComponent: React.FC<CardProps> = ({
       />
       {/* Statistiche player */}
       {type === 'player' && (
-        <View style={styles.playerStats}>
+        <View style={[styles.playerStats, { marginBottom: statsBottomSpacing }]}>
           <View style={styles.statColumn}>
             <Text style={[styles.statLabel, { fontSize: cardStyle.fontSize * 0.8 }]}>
               Attack
@@ -362,7 +368,7 @@ const CardComponent: React.FC<CardProps> = ({
         </View>
       )}
       {type === 'goalkeeper' && (
-        <View style={styles.goalkeeperStats}>
+        <View style={[styles.goalkeeperStats, { marginBottom: statsBottomSpacing }]}>
           <View style={styles.statColumn}>
             <Text style={[styles.statLabel, { fontSize: cardStyle.fontSize * 0.8 }]}>
               Saves
@@ -460,7 +466,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignSelf: 'stretch',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
     backgroundColor: 'transparent',
     borderRadius: 16,
     overflow: 'hidden',

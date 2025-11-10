@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Image,
   ScrollView,
   StyleSheet,
@@ -24,6 +25,7 @@ import {
   type AchievementMetric,
   type AchievementProgress,
 } from '../../hooks/AchievementProvider';
+import { useCredits } from '../../hooks/CreditProvider';
 import type { MainStackParamList } from '../navigators/MainStackNavigator';
 
 const coinSource = require('../../assets/images/Coin.png');
@@ -55,13 +57,15 @@ type SectionRow = {
 const AchievementScreen: React.FC = () => {
   const navigation =
     useNavigation<StackNavigationProp<MainStackParamList, 'Achievement'>>();
-  const { achievements, loading } = useAchievements();
+  const { achievements, loading, claimAchievement } = useAchievements();
+  const { adjustCredits } = useCredits();
   const [expandedSections, setExpandedSections] = useState<Record<AchievementMetric, boolean>>({
     totalAnswers: false,
     correctAnswers: false,
     quizzesCompleted: false,
   });
   const [activeSectionIndex, setActiveSectionIndex] = useState<number>(0);
+  const [claimingId, setClaimingId] = useState<string | null>(null);
   const carouselRef = useRef<ScrollViewInstance | null>(null);
   const { width: windowWidth } = useWindowDimensions();
 
@@ -120,6 +124,32 @@ const AchievementScreen: React.FC = () => {
       });
     },
     [windowWidth],
+  );
+
+  const handleClaimReward = useCallback(
+    async (achievement: AchievementProgress) => {
+      if (!achievement.completed || achievement.claimed) {
+        return;
+      }
+      setClaimingId(achievement.id);
+      try {
+        await adjustCredits(achievement.rewardCredits);
+        await claimAchievement(achievement.id);
+        Alert.alert(
+          'Crediti riscattati',
+          `Hai ottenuto ${achievement.rewardCredits} crediti da questa missione.`,
+        );
+      } catch (error) {
+        console.error('Unable to claim achievement reward', error);
+        Alert.alert(
+          'Errore',
+          'Non e stato possibile erogare i crediti. Controlla la connessione e riprova.',
+        );
+      } finally {
+        setClaimingId(null);
+      }
+    },
+    [adjustCredits, claimAchievement],
   );
 
   useEffect(() => {
@@ -197,17 +227,23 @@ const AchievementScreen: React.FC = () => {
                 if (showLocked || lockedCount === 0) {
                   visibleRows = rowsForSection;
                 } else {
-                  const PREVIEW_UNLOCKED = 2;
-                  const PREVIEW_LOCKED = 2;
-                  const unlockedRows = rowsForSection.filter(row => !row.isLocked);
-                  const lockedRows = rowsForSection.filter(row => row.isLocked);
-                  const previewUnlocked = unlockedRows.slice(-PREVIEW_UNLOCKED);
-                  const missingUnlocked = Math.max(0, PREVIEW_UNLOCKED - previewUnlocked.length);
-                  const previewLocked = lockedRows.slice(
-                    0,
-                    Math.max(PREVIEW_LOCKED, missingUnlocked),
-                  );
-                  visibleRows = [...previewUnlocked, ...previewLocked];
+                  const MAX_PREVIEW_ITEMS = 2;
+                  const activeRow = rowsForSection.find(row => row.isActive);
+                  const nextLockedRow = rowsForSection.find(row => row.isLocked);
+                  let previewRows: SectionRow[] = [];
+
+                  if (activeRow) {
+                    previewRows.push(activeRow);
+                  }
+                  if (nextLockedRow && nextLockedRow !== activeRow) {
+                    previewRows.push(nextLockedRow);
+                  }
+
+                  if (previewRows.length === 0) {
+                    previewRows = rowsForSection.slice(-MAX_PREVIEW_ITEMS);
+                  }
+
+                  visibleRows = previewRows.slice(0, MAX_PREVIEW_ITEMS);
                 }
 
                 return (
@@ -233,6 +269,9 @@ const AchievementScreen: React.FC = () => {
                               item={row.item}
                               isLocked={row.isLocked}
                               isActive={row.isActive}
+                              onClaim={handleClaimReward}
+                              isClaiming={claimingId === row.item.id}
+                              disableClaiming={claimingId !== null}
                             />
                           ))}
                           {lockedCount > 0 && (
@@ -290,7 +329,19 @@ const AchievementRow: React.FC<{
   item: AchievementProgress;
   isLocked: boolean;
   isActive: boolean;
-}> = ({ item, isLocked, isActive }) => (
+  onClaim: (achievement: AchievementProgress) => void;
+  isClaiming: boolean;
+  disableClaiming: boolean;
+}> = ({ item, isLocked, isActive, onClaim, isClaiming, disableClaiming }) => {
+  const canClaim = item.completed && !item.claimed && !isLocked;
+  const shouldDisableClaim = !canClaim || isClaiming || disableClaiming;
+  const claimLabel = item.claimed
+    ? 'Crediti riscattati'
+    : isClaiming
+      ? 'Assegno...'
+      : 'Riscatta crediti';
+
+  return (
   <View
     style={[
       styles.achievementCard,
@@ -336,18 +387,41 @@ const AchievementRow: React.FC<{
           ]}
         >
           {item.completed
-            ? 'Completato'
+            ? item.claimed
+              ? 'Crediti gia riscattati'
+              : 'Completato'
             : isActive
               ? 'Missione in corso'
               : 'Progresso accumulato'}
         </Text>
+        {item.completed && !isLocked && (
+          <TouchableOpacity
+            style={[
+              styles.claimButton,
+              (item.claimed || shouldDisableClaim) && styles.claimButtonDisabled,
+            ]}
+            onPress={() => onClaim(item)}
+            disabled={item.claimed || shouldDisableClaim}
+            activeOpacity={0.85}
+          >
+            <Text
+              style={[
+                styles.claimButtonLabel,
+                (item.claimed || shouldDisableClaim) && styles.claimButtonLabelDisabled,
+              ]}
+            >
+              {claimLabel}
+            </Text>
+          </TouchableOpacity>
+        )}
       </>
     )}
     {isLocked && (
       <Text style={[styles.achievementStatus, styles.statusLocked]}>Bloccata</Text>
     )}
   </View>
-);
+  );
+};
 
 export default AchievementScreen;
 
@@ -512,6 +586,26 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: '#facc15',
+  },
+  claimButton: {
+    marginTop: 12,
+    borderRadius: 999,
+    paddingVertical: 10,
+    alignItems: 'center',
+    backgroundColor: '#22c55e',
+  },
+  claimButtonDisabled: {
+    backgroundColor: 'rgba(34, 197, 94, 0.35)',
+  },
+  claimButtonLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    color: '#0e0c0f',
+  },
+  claimButtonLabelDisabled: {
+    color: '#1f2937',
   },
   progressFill: {
     height: '100%',

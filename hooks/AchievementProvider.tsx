@@ -9,6 +9,7 @@ import React, {
 } from 'react';
 
 const STORAGE_KEY = 'achievement_stats_v1';
+const CLAIMED_STORAGE_KEY = 'achievement_claims_v1';
 
 export type AchievementStats = {
   totalAnswers: number;
@@ -31,6 +32,7 @@ export type AchievementProgress = AchievementDefinition & {
   progress: number;
   completed: boolean;
   percentage: number;
+  claimed: boolean;
 };
 
 const DEFAULT_STATS: AchievementStats = {
@@ -247,6 +249,7 @@ type AchievementContextValue = {
   achievements: AchievementProgress[];
   recordAnswer: (isCorrect: boolean) => Promise<void>;
   recordQuizCompletion: () => Promise<void>;
+  claimAchievement: (achievementId: string) => Promise<void>;
   resetAchievements?: () => Promise<void>;
 };
 
@@ -255,21 +258,36 @@ const AchievementContext = createContext<AchievementContextValue | undefined>(un
 export const AchievementProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [stats, setStats] = useState<AchievementStats>(DEFAULT_STATS);
   const [loading, setLoading] = useState<boolean>(true);
+  const [claimedAchievements, setClaimedAchievements] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
-    const loadStats = async () => {
+    const loadData = async () => {
       try {
-        const stored = await AsyncStorage.getItem(STORAGE_KEY);
-        if (!stored) {
-          return;
+        const [storedStats, storedClaims] = await Promise.all([
+          AsyncStorage.getItem(STORAGE_KEY),
+          AsyncStorage.getItem(CLAIMED_STORAGE_KEY),
+        ]);
+
+        if (storedStats) {
+          const parsed = JSON.parse(storedStats) as Partial<AchievementStats> | null;
+          if (parsed) {
+            setStats({
+              totalAnswers: sanitizeValue(parsed.totalAnswers),
+              correctAnswers: sanitizeValue(parsed.correctAnswers),
+              quizzesCompleted: sanitizeValue(parsed.quizzesCompleted),
+            });
+          }
         }
-        const parsed = JSON.parse(stored) as Partial<AchievementStats> | null;
-        if (parsed) {
-          setStats({
-            totalAnswers: sanitizeValue(parsed.totalAnswers),
-            correctAnswers: sanitizeValue(parsed.correctAnswers),
-            quizzesCompleted: sanitizeValue(parsed.quizzesCompleted),
-          });
+
+        if (storedClaims) {
+          try {
+            const parsedClaims = JSON.parse(storedClaims) as Record<string, boolean>;
+            if (parsedClaims && typeof parsedClaims === 'object') {
+              setClaimedAchievements(parsedClaims);
+            }
+          } catch (error) {
+            console.error('Unable to parse claimed achievements', error);
+          }
         }
       } catch (error) {
         console.error('Unable to load achievement stats', error);
@@ -278,7 +296,7 @@ export const AchievementProvider: React.FC<{ children: React.ReactNode }> = ({ c
       }
     };
 
-    loadStats();
+    loadData();
   }, []);
 
   const persistStats = useCallback(async (next: AchievementStats) => {
@@ -286,6 +304,14 @@ export const AchievementProvider: React.FC<{ children: React.ReactNode }> = ({ c
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next));
     } catch (error) {
       console.error('Unable to persist achievement stats', error);
+    }
+  }, []);
+
+  const persistClaims = useCallback(async (map: Record<string, boolean>) => {
+    try {
+      await AsyncStorage.setItem(CLAIMED_STORAGE_KEY, JSON.stringify(map));
+    } catch (error) {
+      console.error('Unable to persist claimed achievements', error);
     }
   }, []);
 
@@ -322,9 +348,35 @@ export const AchievementProvider: React.FC<{ children: React.ReactNode }> = ({ c
     [applyStatsUpdate],
   );
 
+  const claimAchievement = useCallback(
+    async (achievementId: string) => {
+      let nextClaims: Record<string, boolean> | null = null;
+      setClaimedAchievements(prev => {
+        if (prev[achievementId]) {
+          return prev;
+        }
+        nextClaims = {
+          ...prev,
+          [achievementId]: true,
+        };
+        return nextClaims;
+      });
+      if (nextClaims) {
+        await persistClaims(nextClaims);
+      }
+    },
+    [persistClaims],
+  );
+
   const resetAchievements = useCallback(async () => {
     setStats(DEFAULT_STATS);
+    setClaimedAchievements({});
     await persistStats(DEFAULT_STATS);
+    try {
+      await AsyncStorage.removeItem(CLAIMED_STORAGE_KEY);
+    } catch (error) {
+      console.error('Unable to reset claimed achievements', error);
+    }
   }, [persistStats]);
 
   const achievements = useMemo<AchievementProgress[]>(
@@ -337,9 +389,10 @@ export const AchievementProvider: React.FC<{ children: React.ReactNode }> = ({ c
           progress,
           completed: progress >= def.target,
           percentage,
+          claimed: Boolean(claimedAchievements[def.id]),
         };
       }),
-    [stats],
+    [claimedAchievements, stats],
   );
 
   const value = useMemo(
@@ -349,9 +402,18 @@ export const AchievementProvider: React.FC<{ children: React.ReactNode }> = ({ c
       achievements,
       recordAnswer,
       recordQuizCompletion,
+      claimAchievement,
       resetAchievements,
     }),
-    [achievements, loading, recordAnswer, recordQuizCompletion, resetAchievements, stats],
+    [
+      achievements,
+      claimAchievement,
+      loading,
+      recordAnswer,
+      recordQuizCompletion,
+      resetAchievements,
+      stats,
+    ],
   );
 
   return <AchievementContext.Provider value={value}>{children}</AchievementContext.Provider>;
