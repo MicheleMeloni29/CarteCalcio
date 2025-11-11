@@ -15,7 +15,7 @@ import type { StackNavigationProp } from '@react-navigation/stack';
 import TopStatusBar from '../../components/ui/TopStatusBar';
 import { useAuth } from '../../hooks/AuthProvider';
 import { useCredits } from '../../hooks/CreditProvider';
-import type { MainStackParamList } from '../navigators/MainStackNavigator';
+import type { HomeTabParamList, MainStackParamList } from '../navigators/types';
 
 type SettingsNav = StackNavigationProp<MainStackParamList, 'Settings'>;
 type IoniconName = ComponentProps<typeof Ionicons>['name'];
@@ -34,8 +34,8 @@ const SettingsScreen: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
 
   const handleNavigate = useCallback(
-    (route: keyof MainStackParamList) => {
-      navigation.navigate(route as never);
+    (route: keyof HomeTabParamList) => {
+      navigation.navigate('Tabs', { screen: route });
     },
     [navigation],
   );

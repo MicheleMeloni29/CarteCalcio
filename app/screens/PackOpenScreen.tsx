@@ -22,7 +22,7 @@ import Card from '../../components/ui/Card';
 import type {
   MainStackParamList,
   OpenedPackCard,
-} from '../navigators/MainStackNavigator';
+} from '../navigators/types';
 
 type PackOpenRouteProp = RouteProp<MainStackParamList, 'PackOpen'>;
 
@@ -439,11 +439,11 @@ const PackOpenScreen: React.FC = () => {
   }, [cardData, pan]);
 
   const handleBackToShop = () => {
-    navigation.navigate('Shop');
+    navigation.navigate('Tabs', { screen: 'Shop' });
   };
 
   const handleGoToCollection = () => {
-    navigation.navigate('Collection');
+    navigation.navigate('Tabs', { screen: 'Collection' });
   };
 
   const triggerFeedback = useCallback(() => {

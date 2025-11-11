@@ -16,7 +16,6 @@ import {
 } from 'react-native';
 
 import { useNavigation } from '@react-navigation/native';
-import type { StackNavigationProp } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
 
 import { API_BASE_URL } from '../../constants/api';
@@ -25,9 +24,9 @@ import { useCredits } from '../../hooks/CreditProvider';
 import { useAuth } from '../../hooks/AuthProvider';
 import TopStatusBar from '../../components/ui/TopStatusBar';
 import type {
-  MainStackParamList,
+  AppNavigationProp,
   OpenedPackCard,
-} from '../navigators/MainStackNavigator';
+} from '../navigators/types';
 
 
 
@@ -57,7 +56,7 @@ const ShopScreen: React.FC = () => {
   const [packs, setPacks] = useState<ShopItem[]>([]);
   const [packsLoading, setPacksLoading] = useState<boolean>(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const navigation = useNavigation<StackNavigationProp<MainStackParamList>>();
+  const navigation = useNavigation<AppNavigationProp<'Shop'>>();
 
   const availableCredits = credits ?? 0;
   const sortedItems = useMemo(

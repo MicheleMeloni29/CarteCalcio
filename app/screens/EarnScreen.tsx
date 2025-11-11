@@ -18,16 +18,16 @@ import {
 
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
-import type { StackNavigationProp } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
 
 import { API_BASE_URL } from '../../constants/api';
 import { useCredits } from '../../hooks/CreditProvider';
 import TopStatusBar from '../../components/ui/TopStatusBar';
 import type {
-  MainStackParamList,
+  AppNavigationProp,
+  HomeTabParamList,
   QuizProgressUpdate,
-} from '../navigators/MainStackNavigator';
+} from '../navigators/types';
 
 
 type QuizTheme = {
@@ -98,10 +98,8 @@ const resolveThemeDetail = (slug?: string): ThemeDetail =>
 
 const EarnScreen: React.FC = () => {
   const { adjustCredits } = useCredits();
-  const navigation = useNavigation<
-    StackNavigationProp<MainStackParamList, 'Earn'>
-  >();
-  const route = useRoute<RouteProp<MainStackParamList, 'Earn'>>();
+  const navigation = useNavigation<AppNavigationProp<'Earn'>>();
+  const route = useRoute<RouteProp<HomeTabParamList, 'Earn'>>();
   const [themes, setThemes] = useState<QuizTheme[]>([]);
   const [loadingThemes, setLoadingThemes] = useState<boolean>(false);
   const [fetchError, setFetchError] = useState<string | null>(null);

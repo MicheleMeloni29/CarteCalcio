@@ -22,7 +22,7 @@ import TopStatusBar from '../../components/ui/TopStatusBar';
 import { API_BASE_URL } from '../../constants/api';
 import { useCredits } from '../../hooks/CreditProvider';
 import { useAchievements } from '../../hooks/AchievementProvider';
-import type { MainStackParamList } from '../navigators/MainStackNavigator';
+import type { MainStackParamList } from '../navigators/types';
 
 type QuizAnswer = {
   id: number;
@@ -185,12 +185,15 @@ const QuizPlayScreen: React.FC = () => {
           console.error('Unable to record completed quiz achievement', error),
         );
       }
-      navigation.navigate('Earn', {
-        progressUpdate: {
-          slug: themeSlug,
-          answered: normalizedAnswered,
-          total: questions.length,
-          correct: normalizedCorrect,
+      navigation.navigate('Tabs', {
+        screen: 'Earn',
+        params: {
+          progressUpdate: {
+            slug: themeSlug,
+            answered: normalizedAnswered,
+            total: questions.length,
+            correct: normalizedCorrect,
+          },
         },
       });
     },

@@ -26,7 +26,7 @@ import {
   type AchievementProgress,
 } from '../../hooks/AchievementProvider';
 import { useCredits } from '../../hooks/CreditProvider';
-import type { MainStackParamList } from '../navigators/MainStackNavigator';
+import type { MainStackParamList } from '../navigators/types';
 
 const coinSource = require('../../assets/images/Coin.png');
 
@@ -161,10 +161,10 @@ const AchievementScreen: React.FC = () => {
 
   const handleGoBack = useCallback(() => {
     if (navigation.canGoBack()) {
-      navigation.goBack();
-    } else {
-      navigation.navigate('Home');
-    }
+        navigation.goBack();
+      } else {
+        navigation.navigate('Tabs', { screen: 'Home' });
+      }
   }, [navigation]);
 
   return (

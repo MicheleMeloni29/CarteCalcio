@@ -2,13 +2,12 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { FlatList, StyleSheet, View, Modal, TouchableOpacity, Text, ScrollView, ImageBackground } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import type { StackNavigationProp } from '@react-navigation/stack';
 
 import { API_BASE_URL } from '../../constants/api';
 import Card from '../../components/ui/Card'; // Componente Card personalizzato
 import TopStatusBar from '../../components/ui/TopStatusBar';
 import { useAuth } from '../../hooks/AuthProvider';
-import type { MainStackParamList } from '../navigators/MainStackNavigator';
+import type { AppNavigationProp } from '../navigators/types';
 
 // Definizione dell'interfaccia per il tipo di carta 
 interface CardType {
@@ -78,7 +77,7 @@ const coerceId = (value: unknown, fallback: number): number => {
 };
 
 export default function CollectionScreen() {
-  const navigation = useNavigation<StackNavigationProp<MainStackParamList, 'Collection'>>();
+  const navigation = useNavigation<AppNavigationProp<'Collection'>>();
   const { accessToken, refreshAccessToken } = useAuth();
   const [cards, setCards] = useState<CardType[]>([]);
   const [selectedCard, setSelectedCard] = useState<CardType | null>(null); // Stato per la carta selezionata

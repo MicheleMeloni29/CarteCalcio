@@ -1,59 +1,14 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ImageBackground,
-  TouchableOpacity,
-} from 'react-native';
+import { View, Text, StyleSheet, ImageBackground, TouchableOpacity } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
-import type { MainStackParamList } from '../navigators/MainStackNavigator';
+
 import TopStatusBar from '../../components/ui/TopStatusBar';
-
-type HomeScreenNavigationProp = StackNavigationProp<MainStackParamList, 'Home'>;
-
-const menuItems = [
-  {
-    key: 'collections',
-    label: 'COLLECTIONS',
-    description: 'View the cards you own',
-    route: 'Collection' as const,
-  },
-  {
-    key: 'earn',
-    label: 'EARN',
-    description: 'Learn how to earn rewards',
-    route: 'Earn' as const,
-  },
-  {
-    key: 'shop',
-    label: 'SHOP',
-    description: 'Buy packages and special offers',
-    route: 'Shop' as const,
-  },
-  {
-    key: 'exchange',
-    label: 'EXCHANGE',
-    description: 'Swap duplicate cards with others',
-    route: 'Exchange' as const,
-  },
-  {
-    key: 'achievement',
-    label: 'ACHIEVEMENT',
-    description: 'Track your progress and trophies',
-    route: 'Achievement' as const,
-  },
-  {
-    key: 'settings',
-    label: 'SETTINGS',
-    description: 'Manage accounts and preferences',
-    route: 'Settings' as const,
-  },
-];
+import type { MainStackParamList } from '../navigators/types';
 
 const HomeScreen: React.FC = () => {
-  const navigation = useNavigation<HomeScreenNavigationProp>();
+  const navigation = useNavigation<StackNavigationProp<MainStackParamList>>();
 
   return (
     <ImageBackground
@@ -64,69 +19,21 @@ const HomeScreen: React.FC = () => {
       <View style={styles.overlay}>
         <TopStatusBar />
         <View style={styles.content}>
-            <Text style={styles.heading}>Serie A Exchange</Text>
-            <Text style={styles.subtitle}>
-              Choose where to continue your experience
-            </Text>
+          <Text style={styles.heading}>Serie A Exchange</Text>
+          <Text style={styles.subtitle}>
+            Choose where to continue your experience
+          </Text>
 
-            <View style={styles.menuContainer}>
-              {menuItems.map((item, index) => {
-                const isLeftAligned = index % 2 === 1;
-
-                return (
-                  <TouchableOpacity
-                    key={item.key}
-                    style={[
-                      styles.menuButtonWrapper,
-                      isLeftAligned
-                        ? styles.menuButtonWrapperLeft
-                        : styles.menuButtonWrapperRight,
-                    ]}
-                    activeOpacity={0.85}
-                    onPress={() => {
-                      if (item.route) {
-                        navigation.navigate(item.route);
-                      }
-                    }}
-                  >
-                    <View
-                      style={[
-                        styles.menuButtonBackground,
-                        isLeftAligned
-                          ? styles.menuButtonBackgroundLeft
-                          : styles.menuButtonBackgroundRight,
-                      ]}
-                    >
-                      <View
-                        style={[
-                          styles.menuContent,
-                          isLeftAligned
-                            ? styles.menuContentLeft
-                            : styles.menuContentRight,
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.menuLabel,
-                            isLeftAligned ? styles.textLeft : styles.textRight,
-                          ]}
-                        >
-                          {item.label}
-                        </Text>
-                        <Text
-                          style={[
-                            styles.menuDescription,
-                            isLeftAligned ? styles.textLeft : styles.textRight,
-                          ]}
-                        >
-                          {item.description}
-                        </Text>
-                      </View>
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+          <View style={{ width: '120%', alignItems: 'flex-end'}}>
+            <TouchableOpacity
+              style={styles.achievementButton}
+              activeOpacity={0.85}
+              onPress={() => navigation.navigate('Achievement')}
+            >
+              <Feather name="award" size={36} color="#85cbb1" />
+              <Text style={styles.achievementText}>Achiev.</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     </ImageBackground>
@@ -150,81 +57,36 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingTop: 20,
   },
   heading: {
-    fontSize: 34,
+    fontSize: 36,
     fontWeight: 'bold',
     color: '#00a028ff',
     textAlign: 'center',
-    marginBottom: 12,
-    marginTop: 20,
+    marginBottom: 8,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 18,
     color: '#d0d0d0',
     textAlign: 'center',
-    marginBottom: 30,
+    marginBottom: 14,
   },
-  menuContainer: {
-    gap: 20,
-  },
-  menuButtonWrapper: {
-    width: '90%',
-    overflow: 'hidden',
-    backgroundColor: 'transparent',
-  },
-  menuButtonWrapperLeft: {
-    alignSelf: 'flex-start',
-    marginLeft: 66,
-    marginRight: 'auto',
-  },
-  menuButtonWrapperRight: {
-    alignSelf: 'flex-start',
-    marginLeft: -50,
-    marginRight: 'auto',
-  },
-  menuButtonBackground: {
-    backgroundColor: 'rgba(14, 12, 15, 0.85)',
-    borderRadius: 14,
-    borderWidth: 4,
-    borderColor: '#00a028ff',
-    paddingVertical: 14,
+  achievementButton: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 10,
     paddingHorizontal: 18,
+    borderRadius: 99,
+    backgroundColor: 'rgba(0, 10, 7, 0.78)',
   },
-  menuButtonBackgroundLeft: {
-    transform: [{ skewX: '12deg' }],
-    marginLeft: 28,
-    marginRight: -48,
-  },
-  menuButtonBackgroundRight: {
-    transform: [{ skewX: '-12deg' }],
-    marginRight: 28,
-    marginLeft: -48,
-  },
-  menuContent: {
-    transform: [{ skewX: '0deg' }],
-  },
-  menuContentLeft: {
-    transform: [{ skewX: '-12deg' }],
-  },
-  menuContentRight: {
-    transform: [{ skewX: '12deg' }],
-  },
-  textLeft: {
-    textAlign: 'left',
-  },
-  textRight: {
-    textAlign: 'right',
-  },
-  menuLabel: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#00a028ff',
-    marginBottom: 6,
-  },
-  menuDescription: {
-    fontSize: 14,
-    color: '#f0f0f0',
+  achievementText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#85cbb1',
+    marginTop: -3,
   },
 });
