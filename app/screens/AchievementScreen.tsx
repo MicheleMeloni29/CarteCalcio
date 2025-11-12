@@ -11,11 +11,13 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import type {
+  LayoutChangeEvent,
   NativeScrollEvent,
   NativeSyntheticEvent,
   ScrollView as ScrollViewInstance,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import type { RouteProp } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -57,6 +59,7 @@ type SectionRow = {
 const AchievementScreen: React.FC = () => {
   const navigation =
     useNavigation<StackNavigationProp<MainStackParamList, 'Achievement'>>();
+  const route = useRoute<RouteProp<MainStackParamList, 'Achievement'>>();
   const { achievements, loading, claimAchievement } = useAchievements();
   const { adjustCredits } = useCredits();
   const [expandedSections, setExpandedSections] = useState<Record<AchievementMetric, boolean>>({
@@ -66,7 +69,17 @@ const AchievementScreen: React.FC = () => {
   });
   const [activeSectionIndex, setActiveSectionIndex] = useState<number>(0);
   const [claimingId, setClaimingId] = useState<string | null>(null);
+  const focusAchievementIdParam = route.params?.focusAchievementId ?? null;
+  const [focusedAchievementId, setFocusedAchievementId] = useState<string | null>(
+    focusAchievementIdParam,
+  );
   const carouselRef = useRef<ScrollViewInstance | null>(null);
+  const sectionScrollRefs = useRef<Record<AchievementMetric, ScrollViewInstance | null>>({
+    totalAnswers: null,
+    correctAnswers: null,
+    quizzesCompleted: null,
+  });
+  const focusScrollHandledRef = useRef(false);
   const { width: windowWidth } = useWindowDimensions();
 
   const groupedAchievements = useMemo(() => {
@@ -126,6 +139,60 @@ const AchievementScreen: React.FC = () => {
     [windowWidth],
   );
 
+  useEffect(() => {
+    setFocusedAchievementId(focusAchievementIdParam);
+  }, [focusAchievementIdParam]);
+
+  useEffect(() => {
+    focusScrollHandledRef.current = false;
+  }, [focusedAchievementId]);
+
+  useEffect(() => {
+    if (!focusedAchievementId) {
+      return;
+    }
+    const target = achievements.find(achievement => achievement.id === focusedAchievementId);
+    if (!target) {
+      return;
+    }
+    const sectionIndex = SECTION_CONFIG.findIndex(section => section.metric === target.metric);
+    if (sectionIndex !== -1) {
+      goToSection(sectionIndex);
+      setExpandedSections(prev => ({
+        ...prev,
+        [target.metric]: true,
+      }));
+    }
+  }, [achievements, focusedAchievementId, goToSection]);
+
+  useEffect(() => {
+    if (!focusedAchievementId) {
+      return;
+    }
+    const target = achievements.find(achievement => achievement.id === focusedAchievementId);
+    if (target && target.claimed) {
+      setFocusedAchievementId(null);
+    }
+  }, [achievements, focusedAchievementId]);
+
+  const handleFocusedRowLayout = useCallback(
+    (metric: AchievementMetric, achievementId: string, layoutY: number) => {
+      if (!focusedAchievementId || focusedAchievementId !== achievementId) {
+        return;
+      }
+      if (focusScrollHandledRef.current) {
+        return;
+      }
+      const scrollView = sectionScrollRefs.current[metric];
+      if (!scrollView) {
+        return;
+      }
+      focusScrollHandledRef.current = true;
+      scrollView.scrollTo({ y: Math.max(layoutY - 24, 0), animated: true });
+    },
+    [focusedAchievementId],
+  );
+
   const handleClaimReward = useCallback(
     async (achievement: AchievementProgress) => {
       if (!achievement.completed || achievement.claimed) {
@@ -135,6 +202,7 @@ const AchievementScreen: React.FC = () => {
       try {
         await adjustCredits(achievement.rewardCredits);
         await claimAchievement(achievement.id);
+        setFocusedAchievementId(prev => (prev === achievement.id ? null : prev));
         Alert.alert(
           'Crediti riscattati',
           `Hai ottenuto ${achievement.rewardCredits} crediti da questa missione.`,
@@ -252,6 +320,9 @@ const AchievementScreen: React.FC = () => {
                     style={[styles.sectionSlide, { width: windowWidth }]}
                   >
                     <ScrollView
+                      ref={ref => {
+                        sectionScrollRefs.current[section.metric] = ref;
+                      }}
                       contentContainerStyle={styles.sectionScrollContent}
                       showsVerticalScrollIndicator={false}
                     >
@@ -263,17 +334,31 @@ const AchievementScreen: React.FC = () => {
                         </Text>
                       ) : (
                         <>
-                          {visibleRows.map(row => (
-                            <AchievementRow
-                              key={row.item.id}
-                              item={row.item}
-                              isLocked={row.isLocked}
-                              isActive={row.isActive}
-                              onClaim={handleClaimReward}
-                              isClaiming={claimingId === row.item.id}
-                              disableClaiming={claimingId !== null}
-                            />
-                          ))}
+                          {visibleRows.map(row => {
+                            const isRowFocused = row.item.id === focusedAchievementId;
+                            return (
+                              <AchievementRow
+                                key={row.item.id}
+                                item={row.item}
+                                isLocked={row.isLocked}
+                                isActive={row.isActive}
+                                onClaim={handleClaimReward}
+                                isClaiming={claimingId === row.item.id}
+                                disableClaiming={claimingId !== null}
+                                isFocused={isRowFocused}
+                                onFocusedLayout={
+                                  isRowFocused
+                                    ? event =>
+                                        handleFocusedRowLayout(
+                                          section.metric,
+                                          row.item.id,
+                                          event.nativeEvent.layout.y,
+                                        )
+                                    : undefined
+                                }
+                              />
+                            );
+                          })}
                           {lockedCount > 0 && (
                             <TouchableOpacity
                               style={styles.toggleLockedButton}
@@ -332,7 +417,18 @@ const AchievementRow: React.FC<{
   onClaim: (achievement: AchievementProgress) => void;
   isClaiming: boolean;
   disableClaiming: boolean;
-}> = ({ item, isLocked, isActive, onClaim, isClaiming, disableClaiming }) => {
+  isFocused: boolean;
+  onFocusedLayout?: (event: LayoutChangeEvent) => void;
+}> = ({
+  item,
+  isLocked,
+  isActive,
+  onClaim,
+  isClaiming,
+  disableClaiming,
+  isFocused,
+  onFocusedLayout,
+}) => {
   const canClaim = item.completed && !item.claimed && !isLocked;
   const shouldDisableClaim = !canClaim || isClaiming || disableClaiming;
   const claimLabel = item.claimed
@@ -343,10 +439,12 @@ const AchievementRow: React.FC<{
 
   return (
   <View
+    onLayout={isFocused && onFocusedLayout ? onFocusedLayout : undefined}
     style={[
       styles.achievementCard,
       item.completed && styles.achievementCardCompleted,
       isLocked && styles.achievementCardLocked,
+      isFocused && styles.achievementCardFocused,
     ]}
   >
     <View style={styles.achievementHeader}>
@@ -531,6 +629,14 @@ const styles = StyleSheet.create({
   achievementCardLocked: {
     borderColor: 'rgba(148, 163, 184, 0.35)',
     backgroundColor: 'rgba(15, 15, 19, 0.5)',
+  },
+  achievementCardFocused: {
+    borderColor: '#00a028ff',
+    shadowColor: '#00a028ff',
+    shadowOpacity: 0.5,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 4,
   },
   achievementHeader: {
     flexDirection: 'row',

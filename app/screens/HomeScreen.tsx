@@ -24,7 +24,7 @@ const HomeScreen: React.FC = () => {
             Choose where to continue your experience
           </Text>
 
-          <View style={{ width: '120%', alignItems: 'flex-end'}}>
+          <View style={styles.topCtaRow}>
             <TouchableOpacity
               style={styles.achievementButton}
               activeOpacity={0.85}
@@ -59,7 +59,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     paddingHorizontal: 24,
-    paddingTop: 20,
+    paddingTop: 10,
   },
   heading: {
     fontSize: 36,
@@ -72,14 +72,20 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: '#d0d0d0',
     textAlign: 'center',
-    marginBottom: 14,
+  },
+  topCtaRow: {
+    width: '100%',
+    paddingHorizontal: 0,
+    alignItems: 'flex-end',
+    marginTop: 10,
+    transform: [{ translateX: 26 }],
   },
   achievementButton: {
     flexDirection: 'column',
     alignItems: 'center',
     gap: 6,
-    paddingVertical: 10,
-    paddingHorizontal: 18,
+    paddingVertical: 7,
+    paddingHorizontal: 15,
     borderRadius: 99,
     backgroundColor: 'rgba(0, 10, 7, 0.78)',
   },

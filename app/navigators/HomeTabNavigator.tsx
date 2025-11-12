@@ -180,7 +180,8 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   gradientShell: {
-    width: '92%',
+    alignSelf: 'stretch',
+    marginHorizontal: 24,
     borderRadius: 38,
     elevation: 18,
     shadowColor: '#00a028ff',

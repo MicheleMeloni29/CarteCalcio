@@ -40,7 +40,7 @@ export type HomeTabParamList = {
 
 export type MainStackParamList = {
   Tabs: NavigatorScreenParams<HomeTabParamList>;
-  Achievement: undefined;
+  Achievement: { focusAchievementId?: string } | undefined;
   Settings: undefined;
   QuizPlay: {
     themeSlug: string;
