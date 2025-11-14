@@ -180,7 +180,7 @@ const CardComponent: React.FC<CardProps> = ({
   collectionNumber,
 }) => {
   const sizes = {
-    small: { width: 80, height: 120, fontSize: 2.8, padding: 2.8, borderWidth: 5.6 },
+    small: { width: 60, height: 90, fontSize: 2.1, padding: 2.1, borderWidth: 4.2 },
     medium: { width: 180, height: 270, fontSize: 7, padding: 7, borderWidth: 14 },
     large: { width: 350, height: 525, fontSize: 14, padding: 14, borderWidth: 28 },
   };

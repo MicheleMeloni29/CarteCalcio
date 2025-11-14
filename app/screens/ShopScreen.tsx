@@ -14,6 +14,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -50,6 +51,7 @@ type ShopItem = {
 const coinSource = require('../../assets/images/Coin.png');
 
 const ShopScreen: React.FC = () => {
+  const insets = useSafeAreaInsets();
   const { credits, refreshCredits } = useCredits();
   const { accessToken, refreshAccessToken } = useAuth();
   const [processingId, setProcessingId] = useState<string | null>(null);
@@ -364,7 +366,15 @@ const ShopScreen: React.FC = () => {
   };
 
   return (
-    <View style={styles.container}>
+    <View
+      style={[
+        styles.container,
+        {
+          paddingTop: 16 + insets.top,
+          paddingBottom: Math.max(16, insets.bottom),
+        },
+      ]}
+    >
       <TopStatusBar />
       <View style={styles.headerRow}>
         <TouchableOpacity
@@ -389,7 +399,10 @@ const ShopScreen: React.FC = () => {
         data={sortedItems}
         keyExtractor={item => item.id}
         renderItem={renderItem}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[
+          styles.listContent,
+          { paddingBottom: Math.max(40, insets.bottom + 80) },
+        ]}
         ListEmptyComponent={listEmptyComponent}
       />
     </View>
@@ -410,7 +423,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     columnGap: 12,
     marginTop: 12,
-    marginBottom: 12,
+    marginBottom: 10,
   },
   subtitle: {
     fontSize: 15,
