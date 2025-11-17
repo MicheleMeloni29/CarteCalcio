@@ -433,7 +433,8 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   listContent: {
-    paddingBottom: 40,
+    paddingBottom: 120,
+    paddingTop: 4,
   },
   missionCard: {
     backgroundColor: 'rgba(15, 15, 19, 0.85)',

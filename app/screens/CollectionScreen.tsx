@@ -12,6 +12,7 @@ import {
 
 import { API_BASE_URL } from '../../constants/api';
 import Card from '../../components/ui/Card'; // Componente Card personalizzato
+import DiscoverCard from '../../components/ui/DiscoverCard';
 import TopStatusBar from '../../components/ui/TopStatusBar';
 import { useAuth } from '../../hooks/AuthProvider';
 
@@ -34,6 +35,7 @@ interface CardType {
   image_url?: string;
   rarityColor: 'common' | 'rare' | 'epic' | 'legendary';
   quantity: number;
+  owned: boolean;
   season?: string;
 }
 
@@ -44,6 +46,25 @@ type TeamCardBuckets = {
   goalkeepers: CardType[];
   coaches: CardType[];
 };
+
+const rarityPriority: Record<CardType['rarityColor'], number> = {
+  common: 0,
+  rare: 1,
+  epic: 2,
+  legendary: 3,
+};
+
+const getRarityRank = (rarity?: CardType['rarityColor']): number =>
+  rarity ? rarityPriority[rarity] ?? rarityPriority.common : rarityPriority.common;
+
+const sortCardsByRarity = (cards: CardType[]): CardType[] =>
+  [...cards].sort((a, b) => {
+    const rarityDiff = getRarityRank(a.rarityColor) - getRarityRank(b.rarityColor);
+    if (rarityDiff !== 0) {
+      return rarityDiff;
+    }
+    return (a.name ?? '').localeCompare(b.name ?? '');
+  });
 
 const buildTeamOrderedCards = (
   playerCards: CardType[],
@@ -91,10 +112,13 @@ const buildTeamOrderedCards = (
     if (!bucket) {
       return [];
     }
-    return [...bucket.players, ...bucket.goalkeepers, ...bucket.coaches];
+    const sortedPlayers = sortCardsByRarity(bucket.players);
+    const sortedGoalkeepers = sortCardsByRarity(bucket.goalkeepers);
+    const sortedCoaches = sortCardsByRarity(bucket.coaches);
+    return [...sortedPlayers, ...sortedGoalkeepers, ...sortedCoaches];
   });
 
-  return { orderedByTeam, unassigned };
+  return { orderedByTeam, unassigned: sortCardsByRarity(unassigned) };
 };
 
 type CollectionListItem =
@@ -186,9 +210,9 @@ const parseOptionalNumber = (value: unknown): number | undefined => {
 const parseQuantity = (value: unknown): number => {
   const parsed = parseOptionalNumber(value);
   if (typeof parsed === 'number' && Number.isFinite(parsed)) {
-    return Math.max(1, Math.floor(parsed));
+    return Math.max(0, Math.floor(parsed));
   }
-  return 1;
+  return 0;
 };
 
 const coerceId = (value: unknown, fallback: number): number => {
@@ -245,118 +269,261 @@ export default function CollectionScreen() {
 
   const fetchCards = useCallback(async () => {
     try {
-      const response = await callWithAuth(token =>
-        fetch(`${API_BASE_URL}/api/packs/collection/`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }),
-      );
+      const [catalogResponse, collectionResponse] = await Promise.all([
+        fetch(`${API_BASE_URL}/api/cards/all/`),
+        callWithAuth(token =>
+          fetch(`${API_BASE_URL}/api/packs/collection/`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }),
+        ),
+      ]);
 
-      if (!response.ok) {
-        throw new Error(`Failed to fetch collection (${response.status})`);
+      if (!catalogResponse.ok) {
+        throw new Error(`Failed to fetch catalog (${catalogResponse.status})`);
       }
 
-      const data = await response.json();
+      if (!collectionResponse.ok) {
+        throw new Error(`Failed to fetch collection (${collectionResponse.status})`);
+      }
 
-      const playerCards: CardType[] = (Array.isArray(data?.player_cards)
-        ? data.player_cards
+      const catalogData = await catalogResponse.json();
+      const collectionData = await collectionResponse.json();
+
+      const mapKey = (type: CardType['type'], id: number | string) => `${type}:${id}`;
+      const ownedCardsMap = new Map<string, CardType>();
+
+      const playerCards: CardType[] = (Array.isArray(collectionData?.player_cards)
+        ? collectionData.player_cards
         : []
-      ).map((raw: any, index: number) => ({
-        id: coerceId(raw?.id, index + 1),
+      ).map((raw: any, index: number) => {
+        const quantity = parseQuantity(raw?.quantity);
+        const parsed: CardType = {
+          id: coerceId(raw?.id, index + 1),
+          type: 'player',
+          name: typeof raw?.name === 'string' ? raw.name : 'Carta',
+          team: typeof raw?.team === 'string' ? raw.team : undefined,
+          attack: parseOptionalNumber(raw?.attack),
+          defense: parseOptionalNumber(raw?.defense),
+          abilities: typeof raw?.abilities === 'string' ? raw.abilities : undefined,
+          effect: undefined,
+          duration: undefined,
+          attackBonus: undefined,
+          defenseBonus: undefined,
+          save: undefined,
+          image_url: typeof raw?.image_url === 'string' ? raw.image_url : undefined,
+          rarityColor: normalizeRarity(raw?.rarity),
+          quantity,
+          owned: quantity > 0,
+          season: typeof raw?.season === 'string' ? raw.season : '24/25.1',
+        };
+        ownedCardsMap.set(mapKey(parsed.type, parsed.id), parsed);
+        return parsed;
+      });
+
+      const goalkeeperCards: CardType[] = (Array.isArray(collectionData?.goalkeeper_cards)
+        ? collectionData.goalkeeper_cards
+        : []
+      ).map((raw: any, index: number) => {
+        const quantity = parseQuantity(raw?.quantity);
+        const parsed: CardType = {
+          id: coerceId(raw?.id, index + 500),
+          type: 'goalkeeper',
+          name: typeof raw?.name === 'string' ? raw.name : 'Portiere',
+          team: typeof raw?.team === 'string' ? raw.team : undefined,
+          attack: undefined,
+          defense: undefined,
+          save: parseOptionalNumber(raw?.save),
+          abilities: typeof raw?.abilities === 'string' ? raw.abilities : undefined,
+          effect: undefined,
+          duration: undefined,
+          attackBonus: undefined,
+          defenseBonus: undefined,
+          image_url: typeof raw?.image_url === 'string' ? raw.image_url : undefined,
+          rarityColor: normalizeRarity(raw?.rarity),
+          quantity,
+          owned: quantity > 0,
+          season: typeof raw?.season === 'string' ? raw.season : '24/25.1',
+        };
+        ownedCardsMap.set(mapKey(parsed.type, parsed.id), parsed);
+        return parsed;
+      });
+
+      const coachCards: CardType[] = (Array.isArray(collectionData?.coach_cards)
+        ? collectionData.coach_cards
+        : []
+      ).map((raw: any, index: number) => {
+        const quantity = parseQuantity(raw?.quantity);
+        const parsed: CardType = {
+          id: coerceId(raw?.id, index + 1000),
+          type: 'coach',
+          name: typeof raw?.name === 'string' ? raw.name : 'Allenatore',
+          team: typeof raw?.team === 'string' ? raw.team : undefined,
+          attack: undefined,
+          defense: undefined,
+          abilities: undefined,
+          effect: undefined,
+          duration: undefined,
+          attackBonus: parseOptionalNumber(raw?.attack_bonus),
+          defenseBonus: parseOptionalNumber(raw?.defense_bonus),
+          image_url: typeof raw?.image_url === 'string' ? raw.image_url : undefined,
+          rarityColor: normalizeRarity(raw?.rarity),
+          quantity,
+          owned: quantity > 0,
+          season: typeof raw?.season === 'string' ? raw.season : '24/25.1',
+        };
+        ownedCardsMap.set(mapKey(parsed.type, parsed.id), parsed);
+        return parsed;
+      });
+
+      const bonusCards: CardType[] = (Array.isArray(collectionData?.bonus_malus_cards)
+        ? collectionData.bonus_malus_cards
+        : []
+      ).map((raw: any, index: number) => {
+        const quantity = parseQuantity(raw?.quantity);
+        const parsed: CardType = {
+          id: coerceId(raw?.id, index + 2000),
+          type: 'bonusMalus',
+          name: typeof raw?.name === 'string' ? raw.name : 'Bonus/Malus',
+          team: undefined,
+          attack: undefined,
+          defense: undefined,
+          abilities: undefined,
+          effect: typeof raw?.effect === 'string' ? raw.effect : undefined,
+          duration: parseOptionalNumber(raw?.duration),
+          attackBonus: undefined,
+          defenseBonus: undefined,
+          image_url: typeof raw?.image_url === 'string' ? raw.image_url : undefined,
+          rarityColor: normalizeRarity(raw?.rarity),
+          quantity,
+          owned: quantity > 0,
+          season: typeof raw?.season === 'string' ? raw.season : '24/25.1',
+        };
+        ownedCardsMap.set(mapKey(parsed.type, parsed.id), parsed);
+        return parsed;
+      });
+
+      type CatalogBuilder = {
+        catalogList: any[];
+        type: CardType['type'];
+        fallbackName: string;
+        baseId: number;
+        statMapper?: (raw: any) => Partial<CardType>;
+      };
+
+      const mergeCatalogWithOwned = ({
+        catalogList,
+        type,
+        fallbackName,
+        baseId,
+        statMapper,
+      }: CatalogBuilder): CardType[] => {
+        const normalized: CardType[] = [];
+        const includedKeys = new Set<string>();
+        const list = Array.isArray(catalogList) ? catalogList : [];
+
+        list.forEach((raw, index) => {
+          const id = coerceId(raw?.id, baseId + index);
+          const key = mapKey(type, id);
+          includedKeys.add(key);
+          const ownedCard = ownedCardsMap.get(key);
+          if (ownedCard) {
+            normalized.push(ownedCard);
+            return;
+          }
+          normalized.push({
+            id,
+            type,
+            name: typeof raw?.name === 'string' ? raw.name : fallbackName,
+            team: typeof raw?.team === 'string' ? raw.team : undefined,
+            attack: undefined,
+            defense: undefined,
+            save: undefined,
+            abilities: typeof raw?.abilities === 'string' ? raw.abilities : undefined,
+            effect: undefined,
+            duration: undefined,
+            attackBonus: undefined,
+            defenseBonus: undefined,
+            image_url: typeof raw?.image_url === 'string' ? raw.image_url : undefined,
+            rarityColor: normalizeRarity(raw?.rarity),
+            quantity: 0,
+            owned: false,
+            season: typeof raw?.season === 'string' ? raw.season : '24/25.1',
+            ...(typeof statMapper === 'function' ? statMapper(raw) : {}),
+          });
+        });
+
+        const ownedSource =
+          type === 'player'
+            ? playerCards
+            : type === 'goalkeeper'
+              ? goalkeeperCards
+              : type === 'coach'
+                ? coachCards
+                : bonusCards;
+
+        ownedSource.forEach(card => {
+          const key = mapKey(card.type, card.id);
+          if (!includedKeys.has(key)) {
+            normalized.push(card);
+            includedKeys.add(key);
+          }
+        });
+
+        return normalized;
+      };
+
+      const completePlayerCards = mergeCatalogWithOwned({
+        catalogList: catalogData?.player_cards,
         type: 'player',
-        name: typeof raw?.name === 'string' ? raw.name : 'Carta',
-        team: typeof raw?.team === 'string' ? raw.team : undefined,
-        attack: parseOptionalNumber(raw?.attack),
-        defense: parseOptionalNumber(raw?.defense),
-        abilities:
-          typeof raw?.abilities === 'string' ? raw.abilities : undefined,
-        effect: undefined,
-        duration: undefined,
-        attackBonus: undefined,
-        defenseBonus: undefined,
-        image_url:
-          typeof raw?.image_url === 'string' ? raw.image_url : undefined,
-        rarityColor: normalizeRarity(raw?.rarity),
-        quantity: parseQuantity(raw?.quantity),
-        season: typeof raw?.season === 'string' ? raw.season : '24/25.1',
-      }));
+        fallbackName: 'Carta',
+        baseId: 1,
+        statMapper: raw => ({
+          attack: parseOptionalNumber(raw?.attack),
+          defense: parseOptionalNumber(raw?.defense),
+        }),
+      });
 
-      const goalkeeperCards: CardType[] = (Array.isArray(data?.goalkeeper_cards)
-        ? data.goalkeeper_cards
-        : []
-      ).map((raw: any, index: number) => ({
-        id: coerceId(raw?.id, index + 500),
+      const completeGoalkeeperCards = mergeCatalogWithOwned({
+        catalogList: catalogData?.goalkeeper_cards,
         type: 'goalkeeper',
-        name: typeof raw?.name === 'string' ? raw.name : 'Portiere',
-        team: typeof raw?.team === 'string' ? raw.team : undefined,
-        attack: undefined,
-        defense: undefined,
-        save: parseOptionalNumber(raw?.save),
-        abilities: typeof raw?.abilities === 'string' ? raw.abilities : undefined,
-        effect: undefined,
-        duration: undefined,
-        attackBonus: undefined,
-        defenseBonus: undefined,
-        image_url:
-          typeof raw?.image_url === 'string' ? raw.image_url : undefined,
-        rarityColor: normalizeRarity(raw?.rarity),
-        quantity: parseQuantity(raw?.quantity),
-        season: typeof raw?.season === 'string' ? raw.season : '24/25.1',
-      }));
+        fallbackName: 'Portiere',
+        baseId: 500,
+        statMapper: raw => ({
+          save: parseOptionalNumber(raw?.save ?? raw?.saves),
+        }),
+      });
 
-      const coachCards: CardType[] = (Array.isArray(data?.coach_cards)
-        ? data.coach_cards
-        : []
-      ).map((raw: any, index: number) => ({
-        id: coerceId(raw?.id, index + 1000),
+      const completeCoachCards = mergeCatalogWithOwned({
+        catalogList: catalogData?.coach_cards,
         type: 'coach',
-        name: typeof raw?.name === 'string' ? raw.name : 'Allenatore',
-        team: typeof raw?.team === 'string' ? raw.team : undefined,
-        attack: undefined,
-        defense: undefined,
-        abilities: undefined,
-        effect: undefined,
-        duration: undefined,
-        attackBonus: parseOptionalNumber(raw?.attack_bonus),
-        defenseBonus: parseOptionalNumber(raw?.defense_bonus),
-        image_url:
-          typeof raw?.image_url === 'string' ? raw.image_url : undefined,
-        rarityColor: normalizeRarity(raw?.rarity),
-        quantity: parseQuantity(raw?.quantity),
-        season: typeof raw?.season === 'string' ? raw.season : '24/25.1',
-      }));
+        fallbackName: 'Allenatore',
+        baseId: 1000,
+        statMapper: raw => ({
+          attackBonus: parseOptionalNumber(raw?.attack_bonus),
+          defenseBonus: parseOptionalNumber(raw?.defense_bonus),
+        }),
+      });
 
-      const bonusCards: CardType[] = (Array.isArray(data?.bonus_malus_cards)
-        ? data.bonus_malus_cards
-        : []
-      ).map((raw: any, index: number) => ({
-        id: coerceId(raw?.id, index + 2000),
+      const completeBonusCards = mergeCatalogWithOwned({
+        catalogList: catalogData?.bonus_malus_cards,
         type: 'bonusMalus',
-        name: typeof raw?.name === 'string' ? raw.name : 'Bonus/Malus',
-        team: undefined,
-        attack: undefined,
-        defense: undefined,
-        abilities: undefined,
-        effect: typeof raw?.effect === 'string' ? raw.effect : undefined,
-        duration: parseOptionalNumber(raw?.duration),
-        attackBonus: undefined,
-        defenseBonus: undefined,
-        image_url:
-          typeof raw?.image_url === 'string' ? raw.image_url : undefined,
-        rarityColor: normalizeRarity(raw?.rarity),
-        quantity: parseQuantity(raw?.quantity),
-        season: typeof raw?.season === 'string' ? raw.season : '24/25.1',
-      }));
+        fallbackName: 'Bonus/Malus',
+        baseId: 2000,
+        statMapper: raw => ({
+          effect: typeof raw?.effect === 'string' ? raw.effect : undefined,
+          duration: parseOptionalNumber(raw?.duration),
+        }),
+      });
 
       const { orderedByTeam, unassigned } = buildTeamOrderedCards(
-        playerCards,
-        goalkeeperCards,
-        coachCards,
+        completePlayerCards,
+        completeGoalkeeperCards,
+        completeCoachCards,
       );
 
-      // Keep each coach next to their team while preserving the bonus cards tail.
-      setCards([...orderedByTeam, ...unassigned, ...bonusCards]);
+      setCards([...orderedByTeam, ...unassigned, ...completeBonusCards]);
     } catch (error) {
       console.error('Errore nel recupero della collezione:', error);
       setCards([]);
@@ -387,15 +554,28 @@ export default function CollectionScreen() {
     }
 
     const cardsInRow = item.cards;
-    const emptySlots = Math.max(0, GRID_COLUMNS - cardsInRow.length);
 
     return (
       <View style={styles.cardRow}>
         {cardsInRow.map(card => {
+          const key = `${item.key}-card-${card.id}`;
+          if (!card.owned) {
+            return (
+              <View
+                key={key}
+                style={[styles.cardItem, styles.discoverCardContainer]}
+                pointerEvents="none"
+              >
+                <View style={styles.cardWrapper}>
+                  <DiscoverCard />
+                </View>
+              </View>
+            );
+          }
           const imageSource = card.image_url ? { uri: card.image_url } : DEFAULT_CARD_IMAGE;
           return (
             <TouchableOpacity
-              key={`${item.key}-card-${card.id}`}
+              key={key}
               onPress={() => setSelectedCard(card)}
               style={styles.cardItem}
             >
@@ -425,14 +605,6 @@ export default function CollectionScreen() {
             </TouchableOpacity>
           );
         })}
-        {emptySlots > 0 &&
-          Array.from({ length: emptySlots }).map((_, index) => (
-            <View
-              key={`${item.key}-placeholder-${index}`}
-              style={styles.cardPlaceholder}
-              pointerEvents="none"
-            />
-          ))}
       </View>
     );
   };
@@ -473,31 +645,41 @@ export default function CollectionScreen() {
                 <View style={styles.modalBackdrop} />
               </TouchableWithoutFeedback>
               <View style={styles.modalCardWrapper}>
-                <Card
-                  size="large"
-                  type={selectedCard.type}
-                  name={selectedCard.name}
-                  team={selectedCard.team}
-                  attack={selectedCard.attack}
-                  defense={selectedCard.defense}
-                  save={selectedCard.save}
-                  abilities={selectedCard.abilities}
-                  effect={selectedCard.effect}
-                  duration={selectedCard.duration}
-                  attackBonus={selectedCard.attackBonus}
-                  defenseBonus={selectedCard.defenseBonus}
-                  image={
-                    selectedCard.image_url
-                      ? { uri: selectedCard.image_url }
-                      : require('../../assets/images/Backgrounds/CollectionBackground.jpg')
-                  }
-                  rarity={selectedCard.rarityColor}
-                  season={selectedCard.season}
-                  collectionNumber={selectedCard.id}
-                />
-                <View style={styles.modalQuantityBadge}>
-                  <Text style={styles.modalQuantityBadgeText}>{`x${selectedCard.quantity}`}</Text>
+                <View style={styles.modalCardFrame}>
+                  <Card
+                    size="large"
+                    type={selectedCard.type}
+                    name={selectedCard.name}
+                    team={selectedCard.team}
+                    attack={selectedCard.attack}
+                    defense={selectedCard.defense}
+                    save={selectedCard.save}
+                    abilities={selectedCard.abilities}
+                    effect={selectedCard.effect}
+                    duration={selectedCard.duration}
+                    attackBonus={selectedCard.attackBonus}
+                    defenseBonus={selectedCard.defenseBonus}
+                    image={
+                      selectedCard.image_url
+                        ? { uri: selectedCard.image_url }
+                        : require('../../assets/images/Backgrounds/CollectionBackground.jpg')
+                    }
+                    rarity={selectedCard.rarityColor}
+                    season={selectedCard.season}
+                    collectionNumber={selectedCard.id}
+                  />
+                  <View style={styles.modalQuantityBadge}>
+                    <Text style={styles.modalQuantityBadgeText}>{`x${selectedCard.quantity}`}</Text>
+                  </View>
                 </View>
+                <TouchableOpacity
+                  onPress={() => setSelectedCard(null)}
+                  style={styles.modalCloseButton}
+                  accessibilityRole="button"
+                  accessibilityLabel="Torna alla collezione"
+                >
+                  <Text style={styles.modalCloseButtonText}>Back</Text>
+                </TouchableOpacity>
               </View>
             </View>
           </Modal>
@@ -521,20 +703,20 @@ const styles = StyleSheet.create({
     paddingTop: 20,
   },
   grid: {
-    paddingHorizontal: 22,
+    paddingHorizontal: 12,
     paddingVertical: 22,
     alignItems: 'stretch',
   },
   cardRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    marginBottom: 16,
+    justifyContent: 'center',
+    marginBottom: 18,
   },
   cardItem: {
-    flex: 1,
     alignItems: 'center',
-    marginHorizontal: 6,
+    marginHorizontal: 2,
+    marginVertical: 2,
   },
   cardWrapper: {
     position: 'relative',
@@ -586,6 +768,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     zIndex: 1,
   },
+  modalCardFrame: {
+    position: 'relative',
+    alignItems: 'center',
+  },
+  modalCloseButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 48,
+    borderRadius: 28,
+    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+    borderWidth: 1,
+    borderColor: '#00a028ff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalCloseButtonText: {
+    color: '#00a028ff',
+    fontSize: 22,
+    fontWeight: '500',
+    letterSpacing: 1,
+  },
   modalQuantityBadge: {
     position: 'absolute',
     top: 16,
@@ -612,8 +814,8 @@ const styles = StyleSheet.create({
   teamHeaderRowSpacing: {
     marginTop: 28,
   },
-  cardPlaceholder: {
-    flex: 1,
+  discoverCardContainer: {
+    opacity: 0.85,
     marginHorizontal: 6,
   },
 });

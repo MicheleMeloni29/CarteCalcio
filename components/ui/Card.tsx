@@ -1,5 +1,13 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Image, ImageSourcePropType } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Image,
+  ImageSourcePropType,
+  Animated,
+  PanResponder,
+} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 // Cards component
@@ -151,6 +159,10 @@ const rarityGlowStyles: Partial<
   },
 };
 
+const MAX_TILT_DEG = 15;
+const clampValue = (value: number, min: number, max: number): number =>
+  Math.min(Math.max(value, min), max);
+
 const normalizeTeamName = (team: string | undefined): string => {
   if (!team) return '';
   return team
@@ -280,6 +292,145 @@ const CardComponent: React.FC<CardProps> = ({
     borderRadius: cardStyle.width / 8 + containerBorderWidth,
     padding: containerBorderWidth,
   };
+  const isLargeInteractive = size === 'large';
+  const outerWidth = outerDimensions.width;
+  const outerHeight = outerDimensions.height;
+
+  const tiltValuesRef = useRef<{
+    x: Animated.Value;
+    y: Animated.Value;
+    scale: Animated.Value;
+    magnitude: Animated.Value;
+  } | null>(null);
+
+  if (!tiltValuesRef.current) {
+    tiltValuesRef.current = {
+      x: new Animated.Value(0),
+      y: new Animated.Value(0),
+      scale: new Animated.Value(1),
+      magnitude: new Animated.Value(0),
+    };
+  }
+  const tiltValues = tiltValuesRef.current!;
+
+  const rotateX = useMemo(
+    () =>
+      tiltValues.x.interpolate({
+        inputRange: [-MAX_TILT_DEG, MAX_TILT_DEG],
+        outputRange: [`${-MAX_TILT_DEG}deg`, `${MAX_TILT_DEG}deg`],
+        extrapolate: 'clamp',
+      }),
+    [tiltValues.x],
+  );
+  const rotateY = useMemo(
+    () =>
+      tiltValues.y.interpolate({
+        inputRange: [-MAX_TILT_DEG, MAX_TILT_DEG],
+        outputRange: [`${-MAX_TILT_DEG}deg`, `${MAX_TILT_DEG}deg`],
+        extrapolate: 'clamp',
+      }),
+    [tiltValues.y],
+  );
+  const highlightOpacity = useMemo(
+    () =>
+      tiltValues.y.interpolate({
+        inputRange: [-MAX_TILT_DEG, 0, MAX_TILT_DEG],
+        outputRange: [0.15, 0.28, 0.45],
+        extrapolate: 'clamp',
+      }),
+    [tiltValues.y],
+  );
+  const highlightTranslateY = useMemo(
+    () =>
+      tiltValues.x.interpolate({
+        inputRange: [-MAX_TILT_DEG, MAX_TILT_DEG],
+        outputRange: [-8, 8],
+        extrapolate: 'clamp',
+      }),
+    [tiltValues.x],
+  );
+  const shadowOpacity = useMemo(
+    () =>
+      tiltValues.magnitude.interpolate({
+        inputRange: [0, 1],
+        outputRange: [0.3, 0.6],
+      }),
+    [tiltValues.magnitude],
+  );
+  const shadowScale = useMemo(
+    () =>
+      tiltValues.magnitude.interpolate({
+        inputRange: [0, 1],
+        outputRange: [1, 1.3],
+      }),
+    [tiltValues.magnitude],
+  );
+
+  const panResponder = useMemo(() => {
+    if (!isLargeInteractive) {
+      return null;
+    }
+
+    const resetCard = () => {
+      Animated.spring(tiltValues.x, {
+        toValue: 0,
+        useNativeDriver: true,
+        friction: 6,
+      }).start();
+      Animated.spring(tiltValues.y, {
+        toValue: 0,
+        useNativeDriver: true,
+        friction: 6,
+      }).start();
+      Animated.spring(tiltValues.scale, {
+        toValue: 1,
+        useNativeDriver: true,
+        friction: 5,
+      }).start();
+      Animated.spring(tiltValues.magnitude, {
+        toValue: 0,
+        useNativeDriver: true,
+        friction: 7,
+      }).start();
+    };
+
+    return PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderGrant: () => {
+        Animated.spring(tiltValues.scale, {
+          toValue: 1.04,
+          useNativeDriver: true,
+          friction: 5,
+        }).start();
+      },
+      onPanResponderMove: (_, gestureState) => {
+        const { dx, dy } = gestureState;
+        const tiltY = clampValue(
+          (dx / (outerWidth * 0.5)) * MAX_TILT_DEG,
+          -MAX_TILT_DEG,
+          MAX_TILT_DEG,
+        );
+        const tiltX = clampValue(
+          (-dy / (outerHeight * 0.5)) * MAX_TILT_DEG,
+          -MAX_TILT_DEG,
+          MAX_TILT_DEG,
+        );
+        const normalizedX = tiltX / MAX_TILT_DEG;
+        const normalizedY = tiltY / MAX_TILT_DEG;
+        const tiltStrength = Math.min(
+          Math.sqrt(normalizedX * normalizedX + normalizedY * normalizedY),
+          1,
+        );
+
+        tiltValues.x.setValue(tiltX);
+        tiltValues.y.setValue(tiltY);
+        tiltValues.magnitude.setValue(tiltStrength);
+      },
+      onPanResponderRelease: () => resetCard(),
+      onPanResponderTerminate: () => resetCard(),
+    });
+  }, [isLargeInteractive, outerHeight, outerWidth, tiltValues]);
 
   const cardContent = (
     <LinearGradient
@@ -422,20 +573,16 @@ const CardComponent: React.FC<CardProps> = ({
     </LinearGradient>
   );
 
-  if (borderGradient) {
-    return (
-      <LinearGradient
-        colors={borderGradient}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={[styles.cardOuter, outerDimensions, glowStyle]}
-      >
-        {cardContent}
-      </LinearGradient>
-    );
-  }
-
-  return (
+  const cardBody = borderGradient ? (
+    <LinearGradient
+      colors={borderGradient}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={[styles.cardOuter, outerDimensions, glowStyle]}
+    >
+      {cardContent}
+    </LinearGradient>
+  ) : (
     <View
       style={[
         styles.cardOuter,
@@ -446,6 +593,57 @@ const CardComponent: React.FC<CardProps> = ({
       ]}
     >
       {cardContent}
+    </View>
+  );
+
+  if (!isLargeInteractive) {
+    return cardBody;
+  }
+
+  return (
+    <View style={styles.largeCardScene}>
+      <Animated.View
+        {...(panResponder?.panHandlers ?? {})}
+        style={[
+          styles.largeCard3dContainer,
+          {
+            width: outerWidth,
+            height: outerHeight,
+          },
+          {
+            transform: [
+              { perspective: 1100 },
+              { rotateX },
+              { rotateY },
+              { scale: tiltValues.scale },
+            ],
+          },
+        ]}
+      >
+        {cardBody}
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.largeCardReflection,
+            {
+              opacity: highlightOpacity,
+              transform: [{ translateY: highlightTranslateY }, { rotate: '-8deg' }],
+            },
+          ]}
+        />
+      </Animated.View>
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          styles.largeCardShadow,
+          {
+            width: outerWidth * 0.8,
+            height: Math.max(outerHeight * 0.08, 28),
+            opacity: shadowOpacity,
+            transform: [{ scaleX: shadowScale }],
+          },
+        ]}
+      />
     </View>
   );
 };
@@ -584,6 +782,28 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     includeFontPadding: false,
     transform: [{ rotate: '-90deg' }],
+  },
+  largeCardScene: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+  },
+  largeCard3dContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  largeCardReflection: {
+    position: 'absolute',
+    width: '70%',
+    height: '18%',
+    top: '10%',
+    borderRadius: 999,
+    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+  },
+  largeCardShadow: {
+    marginTop: 20,
+    backgroundColor: '#081018',
+    borderRadius: 999,
   },
 });
 
