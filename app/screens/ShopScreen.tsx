@@ -366,17 +366,17 @@ const ShopScreen: React.FC = () => {
   };
 
   return (
-    <View
-      style={[
-        styles.container,
-        {
-          paddingTop: 16 + insets.top,
-          paddingBottom: Math.max(16, insets.bottom),
-        },
-      ]}
-    >
+    <View style={styles.screen}>
       <TopStatusBar />
-      <View style={styles.headerRow}>
+      <View
+        style={[
+          styles.container,
+          {
+            paddingBottom: Math.max(16, insets.bottom),
+          },
+        ]}
+      >
+        <View style={styles.headerRow}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={handleExit}
@@ -393,18 +393,19 @@ const ShopScreen: React.FC = () => {
             Open pack to find new cards
           </Text>
         </View>
-      </View>
+        </View>
 
-      <FlatList
-        data={sortedItems}
-        keyExtractor={item => item.id}
-        renderItem={renderItem}
-        contentContainerStyle={[
-          styles.listContent,
-          { paddingBottom: Math.max(40, insets.bottom + 80) },
-        ]}
-        ListEmptyComponent={listEmptyComponent}
-      />
+        <FlatList
+          data={sortedItems}
+          keyExtractor={item => item.id}
+          renderItem={renderItem}
+          contentContainerStyle={[
+            styles.listContent,
+            { paddingBottom: Math.max(40, insets.bottom + 80) },
+          ]}
+          ListEmptyComponent={listEmptyComponent}
+        />
+      </View>
     </View>
   );
 };
@@ -412,11 +413,14 @@ const ShopScreen: React.FC = () => {
 export default ShopScreen;
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: '#0e0c0f',
+  },
   container: {
     flex: 1,
     paddingHorizontal: 20,
     paddingTop: 16,
-    backgroundColor: '#0e0c0f',
   },
   headerRow: {
     flexDirection: 'row',

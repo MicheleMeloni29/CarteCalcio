@@ -305,9 +305,10 @@ const QuizPlayScreen: React.FC = () => {
   const selectedIsCorrect = selectedAnswer?.is_correct ?? false;
 
   return (
-    <View style={styles.container}>
+    <View style={styles.screen}>
       <TopStatusBar />
-      <View style={styles.headerRow}>
+      <View style={styles.container}>
+        <View style={styles.headerRow}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={handleExit}
@@ -319,31 +320,31 @@ const QuizPlayScreen: React.FC = () => {
           <Text style={styles.heading}>{themeName}</Text>
           <Text style={styles.counter}>{questionCounterText}</Text>
         </View>
-      </View>
+        </View>
 
-      {loading ? (
-        <View style={styles.loaderContainer}>
-          <ActivityIndicator size="large" color="#22c55e" />
-        </View>
-      ) : error ? (
-        <View style={styles.loaderContainer}>
-          <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={fetchQuestions}>
-            <Text style={styles.retryLabel}>Try again</Text>
-          </TouchableOpacity>
-        </View>
-      ) : !currentQuestion ? (
-        <View style={styles.loaderContainer}>
-              <Text style={styles.emptyText}>No questions available.</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={fetchQuestions}>
-            <Text style={styles.retryLabel}>Update</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <ScrollView
-          contentContainerStyle={styles.quizContent}
-          showsVerticalScrollIndicator={false}
-        >
+        {loading ? (
+          <View style={styles.loaderContainer}>
+            <ActivityIndicator size="large" color="#22c55e" />
+          </View>
+        ) : error ? (
+          <View style={styles.loaderContainer}>
+            <Text style={styles.errorText}>{error}</Text>
+            <TouchableOpacity style={styles.retryButton} onPress={fetchQuestions}>
+              <Text style={styles.retryLabel}>Try again</Text>
+            </TouchableOpacity>
+          </View>
+        ) : !currentQuestion ? (
+          <View style={styles.loaderContainer}>
+            <Text style={styles.emptyText}>No questions available.</Text>
+            <TouchableOpacity style={styles.retryButton} onPress={fetchQuestions}>
+              <Text style={styles.retryLabel}>Update</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <ScrollView
+            contentContainerStyle={styles.quizContent}
+            showsVerticalScrollIndicator={false}
+          >
           <View style={styles.questionCard}>
             <Text style={styles.questionText}>{currentQuestion.text}</Text>
             {selectedAnswerId !== null && currentQuestion.explanation ? (
@@ -393,8 +394,9 @@ const QuizPlayScreen: React.FC = () => {
                     {selectedIsCorrect ? 'Correct answer!' : 'Wrong answer'}
             </Text>
           ) : null}
-        </ScrollView>
-      )}
+          </ScrollView>
+        )}
+      </View>
     </View>
   );
 };
@@ -402,11 +404,14 @@ const QuizPlayScreen: React.FC = () => {
 export default QuizPlayScreen;
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: '#0e0c0f',
+  },
   container: {
     flex: 1,
     paddingHorizontal: 20,
     paddingTop: 16,
-    backgroundColor: '#0e0c0f',
   },
   headerRow: {
     flexDirection: 'row',

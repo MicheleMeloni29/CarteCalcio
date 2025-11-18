@@ -335,9 +335,10 @@ const EarnScreen: React.FC = () => {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={styles.screen}>
       <TopStatusBar />
-      <View style={styles.headerRow}>
+      <View style={styles.container}>
+        <View style={styles.headerRow}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={handleExit}
@@ -354,36 +355,37 @@ const EarnScreen: React.FC = () => {
             Complete quiz to earn more credits
           </Text>
         </View>
-      </View>
-
-      {loadingThemes && orderedThemes.length === 0 ? (
-        <View style={styles.loaderContainer}>
-          <ActivityIndicator size="large" color="#22c55e" />
         </View>
-      ) : (
-        <FlatList
-          data={orderedThemes}
-          keyExtractor={item => item.slug}
-          renderItem={renderTheme}
-          contentContainerStyle={styles.listContent}
-          refreshControl={
-            <RefreshControl
-              refreshing={loadingThemes}
-              onRefresh={fetchThemes}
-              tintColor="#22c55e"
-            />
-          }
-          ListEmptyComponent={
-            fetchError ? (
-              <Text style={styles.emptyMessage}>{fetchError}</Text>
-            ) : (
-              <Text style={styles.emptyMessage}>
-                Nessun quiz disponibile al momento.
-              </Text>
-            )
-          }
-        />
-      )}
+
+        {loadingThemes && orderedThemes.length === 0 ? (
+          <View style={styles.loaderContainer}>
+            <ActivityIndicator size="large" color="#22c55e" />
+          </View>
+        ) : (
+          <FlatList
+            data={orderedThemes}
+            keyExtractor={item => item.slug}
+            renderItem={renderTheme}
+            contentContainerStyle={styles.listContent}
+            refreshControl={
+              <RefreshControl
+                refreshing={loadingThemes}
+                onRefresh={fetchThemes}
+                tintColor="#22c55e"
+              />
+            }
+            ListEmptyComponent={
+              fetchError ? (
+                <Text style={styles.emptyMessage}>{fetchError}</Text>
+              ) : (
+                <Text style={styles.emptyMessage}>
+                  Nessun quiz disponibile al momento.
+                </Text>
+              )
+            }
+          />
+        )}
+      </View>
     </View>
   );
 };
@@ -391,11 +393,14 @@ const EarnScreen: React.FC = () => {
 export default EarnScreen;
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: '#0e0c0f',
+  },
   container: {
     flex: 1,
     paddingHorizontal: 20,
     paddingTop: 16,
-    backgroundColor: '#0e0c0f',
   },
   headerRow: {
     flexDirection: 'row',

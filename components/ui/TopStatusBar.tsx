@@ -25,7 +25,11 @@ type QuickSettingRow = {
   destructive?: boolean;
 };
 
-const TopStatusBar: React.FC = () => {
+interface TopStatusBarProps {
+  edgePadding?: number;
+}
+
+const TopStatusBar: React.FC<TopStatusBarProps> = ({ edgePadding = 24 }) => {
   const { accessToken, logout } = useAuth();
   const { credits, username } = useCredits();
   const { achievements, loading: achievementsLoading } = useAchievements();
@@ -236,7 +240,15 @@ const TopStatusBar: React.FC = () => {
   }
 
   return (
-    <View style={[styles.wrapper, { paddingTop: insets.top + 4 }]}>
+    <View
+      style={[
+        styles.wrapper,
+        {
+          paddingTop: insets.top + 4,
+          paddingHorizontal: edgePadding,
+        },
+      ]}
+    >
       <TouchableOpacity
         accessibilityLabel="Apri notifiche"
         accessibilityHint="Mostra le notifiche disponibili"
@@ -399,6 +411,8 @@ const TopStatusBar: React.FC = () => {
 const styles = StyleSheet.create({
   wrapper: {
     paddingHorizontal: 0,
+    width: '100%',
+    alignSelf: 'stretch',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',

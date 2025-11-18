@@ -616,74 +616,76 @@ export default function CollectionScreen() {
       style={styles.background}
       imageStyle={styles.backgroundImage}
     >
-      <View style={styles.container}>
+      <View style={styles.screen}>
         <TopStatusBar />
-        <FlatList
-          data={displayItems}
-          keyExtractor={item => item.key}
-          renderItem={renderItem}
-          contentContainerStyle={[
-            styles.grid,
-            cards.length === 0 && styles.gridEmpty,
-          ]}
-          ListEmptyComponent={
-            <Text style={styles.emptyMessage}>
-              No cards found
-            </Text>
-          }
-        />
+        <View style={styles.container}>
+          <FlatList
+            data={displayItems}
+            keyExtractor={item => item.key}
+            renderItem={renderItem}
+            contentContainerStyle={[
+              styles.grid,
+              cards.length === 0 && styles.gridEmpty,
+            ]}
+            ListEmptyComponent={
+              <Text style={styles.emptyMessage}>
+                No cards found
+              </Text>
+            }
+          />
 
-        {selectedCard && (
-          <Modal
-            transparent
-            animationType="fade"
-            visible
-            onRequestClose={() => setSelectedCard(null)}
-          >
-            <View style={styles.modalContainer}>
-              <TouchableWithoutFeedback onPress={() => setSelectedCard(null)}>
-                <View style={styles.modalBackdrop} />
-              </TouchableWithoutFeedback>
-              <View style={styles.modalCardWrapper}>
-                <View style={styles.modalCardFrame}>
-                  <Card
-                    size="large"
-                    type={selectedCard.type}
-                    name={selectedCard.name}
-                    team={selectedCard.team}
-                    attack={selectedCard.attack}
-                    defense={selectedCard.defense}
-                    save={selectedCard.save}
-                    abilities={selectedCard.abilities}
-                    effect={selectedCard.effect}
-                    duration={selectedCard.duration}
-                    attackBonus={selectedCard.attackBonus}
-                    defenseBonus={selectedCard.defenseBonus}
-                    image={
-                      selectedCard.image_url
-                        ? { uri: selectedCard.image_url }
-                        : require('../../assets/images/Backgrounds/CollectionBackground.jpg')
-                    }
-                    rarity={selectedCard.rarityColor}
-                    season={selectedCard.season}
-                    collectionNumber={selectedCard.id}
-                  />
-                  <View style={styles.modalQuantityBadge}>
-                    <Text style={styles.modalQuantityBadgeText}>{`x${selectedCard.quantity}`}</Text>
+          {selectedCard && (
+            <Modal
+              transparent
+              animationType="fade"
+              visible
+              onRequestClose={() => setSelectedCard(null)}
+            >
+              <View style={styles.modalContainer}>
+                <TouchableWithoutFeedback onPress={() => setSelectedCard(null)}>
+                  <View style={styles.modalBackdrop} />
+                </TouchableWithoutFeedback>
+                <View style={styles.modalCardWrapper}>
+                  <View style={styles.modalCardFrame}>
+                    <Card
+                      size="large"
+                      type={selectedCard.type}
+                      name={selectedCard.name}
+                      team={selectedCard.team}
+                      attack={selectedCard.attack}
+                      defense={selectedCard.defense}
+                      save={selectedCard.save}
+                      abilities={selectedCard.abilities}
+                      effect={selectedCard.effect}
+                      duration={selectedCard.duration}
+                      attackBonus={selectedCard.attackBonus}
+                      defenseBonus={selectedCard.defenseBonus}
+                      image={
+                        selectedCard.image_url
+                          ? { uri: selectedCard.image_url }
+                          : require('../../assets/images/Backgrounds/CollectionBackground.jpg')
+                      }
+                      rarity={selectedCard.rarityColor}
+                      season={selectedCard.season}
+                      collectionNumber={selectedCard.id}
+                    />
+                    <View style={styles.modalQuantityBadge}>
+                      <Text style={styles.modalQuantityBadgeText}>{`x${selectedCard.quantity}`}</Text>
+                    </View>
                   </View>
+                  <TouchableOpacity
+                    onPress={() => setSelectedCard(null)}
+                    style={styles.modalCloseButton}
+                    accessibilityRole="button"
+                    accessibilityLabel="Torna alla collezione"
+                  >
+                    <Text style={styles.modalCloseButtonText}>Back</Text>
+                  </TouchableOpacity>
                 </View>
-                <TouchableOpacity
-                  onPress={() => setSelectedCard(null)}
-                  style={styles.modalCloseButton}
-                  accessibilityRole="button"
-                  accessibilityLabel="Torna alla collezione"
-                >
-                  <Text style={styles.modalCloseButtonText}>Back</Text>
-                </TouchableOpacity>
               </View>
-            </View>
-          </Modal>
-        )}
+            </Modal>
+          )}
+        </View>
       </View>
     </ImageBackground>
   );
@@ -695,9 +697,12 @@ const styles = StyleSheet.create({
   },
   backgroundImage: {
   },
-  container: {
+  screen: {
     flex: 1,
     backgroundColor: 'rgba(14, 12, 15, 0.25)',
+  },
+  container: {
+    flex: 1,
     paddingBottom: 90,
     paddingHorizontal: 20,
     paddingTop: 20,

@@ -1,4 +1,4 @@
-export const API_BASE_URL = 'https://9efd2ff91cc4.ngrok-free.app';
+export const API_BASE_URL = 'https://d47872a74f65.ngrok-free.app';
 
 export const buildApiUrl = (path: string) => {
   const normalizedBase = API_BASE_URL.replace(/\/+$/, '');

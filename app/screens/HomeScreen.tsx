@@ -17,7 +17,7 @@ const HomeScreen: React.FC = () => {
       imageStyle={styles.backgroundImage}
     >
       <View style={styles.overlay}>
-        <TopStatusBar />
+        <TopStatusBar edgePadding={0} />
         <View style={styles.content}>
           <Text style={styles.heading}>Serie A Exchange</Text>
           <Text style={styles.subtitle}>

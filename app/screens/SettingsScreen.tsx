@@ -103,9 +103,10 @@ const SettingsScreen: React.FC = () => {
   );
 
   return (
-    <View style={styles.container}>
+    <View style={styles.screen}>
       <TopStatusBar />
       <ScrollView
+        style={styles.container}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
@@ -183,11 +184,14 @@ const SettingsScreen: React.FC = () => {
 export default SettingsScreen;
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: '#0e0c0f',
+  },
   container: {
     flex: 1,
     paddingHorizontal: 24,
     paddingTop: 16,
-    backgroundColor: '#0e0c0f',
   },
   scrollContent: {
     paddingBottom: 28,

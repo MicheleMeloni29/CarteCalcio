@@ -236,38 +236,39 @@ const AchievementScreen: React.FC = () => {
   }, [navigation]);
 
   return (
-    <View style={styles.container}>
+    <View style={styles.screen}>
       <TopStatusBar />
-      <View style={styles.headerRow}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={handleGoBack}
-          activeOpacity={0.85}
-        >
-          <Ionicons name="arrow-back" size={22} color="#00a028ff" />
-        </TouchableOpacity>
-        <View style={styles.balanceCard}>
-          <Text style={styles.subtitle}>
-            Redeem completed objectives and plan next ones
-          </Text>
-        </View>
-      </View>
-      {loading ? (
-        <View style={styles.loaderContainer}>
-          <ActivityIndicator size="large" color="#22c55e" />
-        </View>
-      ) : (
-        <View style={styles.carouselWrapper}>
-          <ScrollView
-            ref={carouselRef}
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            decelerationRate="fast"
-            onMomentumScrollEnd={handleMomentumScrollEnd}
-            snapToAlignment="center"
-            contentContainerStyle={{}}
+      <View style={styles.container}>
+        <View style={styles.headerRow}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={handleGoBack}
+            activeOpacity={0.85}
           >
+            <Ionicons name="arrow-back" size={22} color="#00a028ff" />
+          </TouchableOpacity>
+          <View style={styles.balanceCard}>
+            <Text style={styles.subtitle}>
+              Redeem completed objectives and plan next ones
+            </Text>
+          </View>
+        </View>
+        {loading ? (
+          <View style={styles.loaderContainer}>
+            <ActivityIndicator size="large" color="#22c55e" />
+          </View>
+        ) : (
+          <View style={styles.carouselWrapper}>
+            <ScrollView
+              ref={carouselRef}
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              decelerationRate="fast"
+              onMomentumScrollEnd={handleMomentumScrollEnd}
+              snapToAlignment="center"
+              contentContainerStyle={{}}
+            >
               {SECTION_CONFIG.map((section, sectionIndex) => {
                 const items = groupedAchievements[section.metric];
                 const nextIncompleteIndex = items.findIndex(item => !item.completed);
@@ -404,8 +405,9 @@ const AchievementScreen: React.FC = () => {
               />
             </TouchableOpacity>
           ))}
-        </View>
-      )}
+          </View>
+        )}
+      </View>
     </View>
   );
 };
@@ -524,11 +526,14 @@ const AchievementRow: React.FC<{
 export default AchievementScreen;
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: '#0e0c0f',
+  },
   container: {
     flex: 1,
     paddingHorizontal: 24,
     paddingTop: 16,
-    backgroundColor: '#0e0c0f',
   },
   headerRow: {
     flexDirection: 'row',
