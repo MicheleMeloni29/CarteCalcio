@@ -15,6 +15,8 @@ class CustomUser(AbstractUser):
     # Altri dettagli
     level = models.IntegerField(default=1)
     money = models.IntegerField(default=500)
+    achievement_stats = models.JSONField(default=dict, blank=True)
+    achievement_claims = models.JSONField(default=list, blank=True)
 
     def __str__(self):
         return self.username

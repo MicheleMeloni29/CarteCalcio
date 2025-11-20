@@ -5,6 +5,32 @@ from rest_framework.views import APIView
 
 from .serializers import RegisterSerializer
 
+DEFAULT_ACHIEVEMENT_STATS = {
+    "totalAnswers": 0,
+    "correctAnswers": 0,
+    "quizzesCompleted": 0,
+}
+
+
+def _normalize_stats(payload):
+    normalized = dict(DEFAULT_ACHIEVEMENT_STATS)
+    source = payload if isinstance(payload, dict) else {}
+    for key in DEFAULT_ACHIEVEMENT_STATS:
+        value = source.get(key)
+        if isinstance(value, (int, float)):
+            normalized[key] = max(0, int(value))
+    return normalized
+
+
+def _normalize_claims(payload):
+    result = []
+    seen = set()
+    if isinstance(payload, list):
+        for item in payload:
+            if isinstance(item, str) and item and item not in seen:
+                seen.add(item)
+                result.append(item)
+    return result
 
 class RegisterView(APIView):
     def post(self, request):
@@ -73,3 +99,48 @@ class UserCreditsView(APIView):
             },
             status=status.HTTP_200_OK,
         )
+
+
+class AchievementProgressView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        stats = _normalize_stats(request.user.achievement_stats)
+        claims = _normalize_claims(request.user.achievement_claims)
+        return Response(
+            {
+                "stats": stats,
+                "claimedAchievementIds": claims,
+                "userId": request.user.id,
+                "username": request.user.username,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    def put(self, request):
+        incoming_stats = request.data.get("stats")
+        incoming_claims = request.data.get("claimedAchievementIds")
+
+        stats_source = incoming_stats if isinstance(incoming_stats, dict) else request.user.achievement_stats
+        claims_source = incoming_claims if isinstance(incoming_claims, list) else request.user.achievement_claims
+
+        stats = _normalize_stats(stats_source)
+        claims = _normalize_claims(claims_source)
+
+        user = request.user
+        user.achievement_stats = stats
+        user.achievement_claims = claims
+        user.save(update_fields=["achievement_stats", "achievement_claims"])
+
+        return Response(
+            {
+                "stats": stats,
+                "claimedAchievementIds": claims,
+                "userId": request.user.id,
+                "username": request.user.username,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    def patch(self, request):
+        return self.put(request)

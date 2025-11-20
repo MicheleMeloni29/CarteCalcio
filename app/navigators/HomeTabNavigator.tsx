@@ -150,7 +150,7 @@ const FloatingTabBar: React.FC<BottomTabBarProps> = ({
                 <Feather
                   name={iconName}
                   size={iconSize}
-                  color={isFocused ? '#00a028ff' : '#85cbb1'}
+                  color={isFocused ? '#85cbb1' : '#00a028ff'}
                 />
                 <Text
                   style={[
@@ -213,9 +213,9 @@ const styles = StyleSheet.create({
   tabLabel: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#85cbb1',
+    color: '#00a028ff',
   },
   tabLabelActive: {
-    color: '#00a028ff',
+    color: '#85cbb1',
   },
 });

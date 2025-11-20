@@ -9,6 +9,7 @@ import type { StackNavigationProp } from '@react-navigation/stack';
 import { useAuth } from '../../hooks/AuthProvider';
 import { useCredits } from '../../hooks/CreditProvider';
 import { useAchievements } from '../../hooks/AchievementProvider';
+import { useExchangeNotifications } from '../../hooks/useExchangeNotifications';
 import { rootNavigationRef } from '../../app/navigators/navigationRef';
 import type { MainStackParamList } from '../../app/navigators/types';
 
@@ -42,21 +43,61 @@ const TopStatusBar: React.FC<TopStatusBarProps> = ({ edgePadding = 24 }) => {
   const [analyticsEnabled, setAnalyticsEnabled] = useState(true);
   const [languagePreview, setLanguagePreview] = useState<'it' | 'en'>('it');
 
-  const pendingNotifications = useMemo(
+  const {
+    notifications: exchangeNotifications,
+    loading: exchangeNotificationsLoading,
+    markNotificationsRead,
+  } = useExchangeNotifications();
+
+  type NotificationItem =
+    | {
+        key: string;
+        type: 'achievement';
+        title: string;
+        description: string;
+        achievementId: string;
+      }
+    | {
+        key: string;
+        type: 'exchange';
+        title: string;
+        description: string;
+        exchangeId: string;
+      };
+
+  const achievementNotifications = useMemo<NotificationItem[]>(
     () =>
       achievements
         .filter(achievement => achievement.completed && !achievement.claimed)
         .map(achievement => ({
-          id: achievement.id,
+          key: `achievement-${achievement.id}`,
+          type: 'achievement' as const,
           title: achievement.title,
-          description: achievement.description,
-          rewardCredits: achievement.rewardCredits,
+          description: `${achievement.description} | +${achievement.rewardCredits} crediti`,
+          achievementId: achievement.id,
         })),
     [achievements],
   );
 
-  const notificationCount = pendingNotifications.length;
-  const displayedNotifications = pendingNotifications.slice(0, 4);
+  const exchangeNotificationItems = useMemo<NotificationItem[]>(
+    () =>
+      exchangeNotifications.map(notification => ({
+        key: `exchange-${notification.id}`,
+        type: 'exchange' as const,
+        title: notification.title,
+        description: notification.message,
+        exchangeId: notification.id,
+      })),
+    [exchangeNotifications],
+  );
+
+  const combinedNotifications = useMemo(
+    () => [...achievementNotifications, ...exchangeNotificationItems],
+    [achievementNotifications, exchangeNotificationItems],
+  );
+
+  const notificationCount = combinedNotifications.length;
+  const displayedNotifications = combinedNotifications.slice(0, 4);
   const extraNotifications = Math.max(0, notificationCount - displayedNotifications.length);
 
   const handleToggleNotifications = useCallback(() => {
@@ -135,6 +176,39 @@ const TopStatusBar: React.FC<TopStatusBarProps> = ({ edgePadding = 24 }) => {
       }
     },
     [navigation],
+  );
+
+  const handleExchangeNotificationPress = useCallback(
+    (notificationId: string) => {
+      markNotificationsRead([notificationId]).catch(error => {
+        console.error('Unable to acknowledge exchange notification', error);
+      });
+      setNotificationsOpen(false);
+      setSettingsOpen(false);
+
+      let currentNavigator: any = navigation;
+      while (currentNavigator) {
+        const state = currentNavigator.getState?.();
+        const routeNames: string[] | undefined = state?.routeNames;
+        if (routeNames?.includes('Exchange')) {
+          currentNavigator.navigate('Exchange');
+          return;
+        }
+        currentNavigator = currentNavigator.getParent?.();
+      }
+
+      if (rootNavigationRef.isReady()) {
+        rootNavigationRef.dispatch(
+          CommonActions.navigate({
+            name: 'Exchange',
+            merge: true,
+          }),
+        );
+      } else {
+        console.warn('Navigation not ready yet, cannot open Exchange screen.');
+      }
+    },
+    [markNotificationsRead, navigation],
   );
 
   const togglePushNotificationsSetting = useCallback(() => {
@@ -328,21 +402,32 @@ const TopStatusBar: React.FC<TopStatusBarProps> = ({ edgePadding = 24 }) => {
       {notificationsOpen && (
         <View style={[styles.notificationsDropdown, { top: insets.top + 56 }]}>
           <Text style={styles.dropdownTitle}>Notifiche</Text>
-          {achievementsLoading ? (
+          {achievementsLoading || exchangeNotificationsLoading ? (
             <Text style={styles.dropdownEmpty}>Caricamento notifiche...</Text>
           ) : (
             <>
               {displayedNotifications.length === 0 ? (
                 <Text style={styles.dropdownEmpty}>Nessuna notifica al momento</Text>
               ) : (
-                displayedNotifications.map(notification => (
-                  <View key={notification.id} style={styles.notificationItem}>
-                    <Text style={styles.notificationTitle}>{notification.title}</Text>
-                    <Text style={styles.notificationDescription}>
-                      {notification.description} | +{notification.rewardCredits} crediti
-                    </Text>
-                  </View>
-                ))
+                displayedNotifications.map(notification => {
+                  const onPress =
+                    notification.type === 'achievement'
+                      ? () => handleNotificationPress(notification.achievementId)
+                      : () => handleExchangeNotificationPress(notification.exchangeId);
+                  return (
+                    <TouchableOpacity
+                      key={notification.key}
+                      activeOpacity={0.85}
+                      style={styles.notificationItem}
+                      onPress={onPress}
+                      accessibilityRole="button"
+                      accessibilityLabel={notification.title}
+                    >
+                      <Text style={styles.notificationTitle}>{notification.title}</Text>
+                      <Text style={styles.notificationDescription}>{notification.description}</Text>
+                    </TouchableOpacity>
+                  );
+                })
               )}
               {extraNotifications > 0 && (
                 <Text style={styles.dropdownFooter}>

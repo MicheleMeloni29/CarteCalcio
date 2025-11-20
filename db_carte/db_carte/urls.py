@@ -27,6 +27,7 @@ urlpatterns = [
     path('api/cards/', include('cards.urls')),  # Include gli URL dell'app "cards"
     path('api/quiz/', include('quiz.urls')),  # Include gli URL dell'app "quiz"
     path('api/packs/', include('packs.urls')),  # Include gli URL dell'app "packs"
+    path('api/exchange/', include('exchange.urls')),  # Include gli URL dell'app "exchange"
 ] 
 
 if settings.DEBUG:

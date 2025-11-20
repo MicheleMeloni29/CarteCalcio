@@ -3,7 +3,6 @@ import {
   ActivityIndicator,
   Alert,
   Image,
-  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -16,6 +15,7 @@ import type {
   NativeSyntheticEvent,
   ScrollView as ScrollViewInstance,
 } from 'react-native';
+import { ScrollView as GestureScrollView } from 'react-native-gesture-handler';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
@@ -74,10 +74,12 @@ const AchievementScreen: React.FC = () => {
     focusAchievementIdParam,
   );
   const carouselRef = useRef<ScrollViewInstance | null>(null);
-  const sectionScrollRefs = useRef<Record<AchievementMetric, ScrollViewInstance | null>>({
-    totalAnswers: null,
-    correctAnswers: null,
-    quizzesCompleted: null,
+  const sectionScrollRefs = useRef<
+    Record<AchievementMetric, React.RefObject<ScrollViewInstance>>
+  >({
+    totalAnswers: React.createRef<ScrollViewInstance>(),
+    correctAnswers: React.createRef<ScrollViewInstance>(),
+    quizzesCompleted: React.createRef<ScrollViewInstance>(),
   });
   const focusScrollHandledRef = useRef(false);
   const { width: windowWidth } = useWindowDimensions();
@@ -183,7 +185,7 @@ const AchievementScreen: React.FC = () => {
       if (focusScrollHandledRef.current) {
         return;
       }
-      const scrollView = sectionScrollRefs.current[metric];
+      const scrollView = sectionScrollRefs.current[metric].current;
       if (!scrollView) {
         return;
       }
@@ -259,15 +261,17 @@ const AchievementScreen: React.FC = () => {
           </View>
         ) : (
           <View style={styles.carouselWrapper}>
-            <ScrollView
+            <GestureScrollView
               ref={carouselRef}
               horizontal
               pagingEnabled
+              nestedScrollEnabled
               showsHorizontalScrollIndicator={false}
               decelerationRate="fast"
               onMomentumScrollEnd={handleMomentumScrollEnd}
               snapToAlignment="center"
               contentContainerStyle={{}}
+              simultaneousHandlers={Object.values(sectionScrollRefs.current)}
             >
               {SECTION_CONFIG.map((section, sectionIndex) => {
                 const items = groupedAchievements[section.metric];
@@ -320,10 +324,10 @@ const AchievementScreen: React.FC = () => {
                     key={section.metric}
                     style={[styles.sectionSlide, { width: windowWidth }]}
                   >
-                    <ScrollView
-                      ref={ref => {
-                        sectionScrollRefs.current[section.metric] = ref;
-                      }}
+                    <GestureScrollView
+                      ref={sectionScrollRefs.current[section.metric]}
+                      nestedScrollEnabled
+                      simultaneousHandlers={carouselRef}
                       contentContainerStyle={styles.sectionScrollContent}
                       showsVerticalScrollIndicator={false}
                     >
@@ -381,11 +385,11 @@ const AchievementScreen: React.FC = () => {
                         </>
                       )}
                       </View>
-                    </ScrollView>
+                    </GestureScrollView>
                   </View>
                 );
               })}
-          </ScrollView>
+          </GestureScrollView>
         </View>
       )}
       {!loading && (

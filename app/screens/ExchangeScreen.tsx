@@ -276,9 +276,10 @@ const ExchangeScreen: React.FC = () => {
     if (!selectedOfferCard) {
       return;
     }
+    const missingCount = requestableCards.length;
 
     try {
-      await callWithAuth(token =>
+      const response = await callWithAuth(token =>
         fetch(`${API_BASE_URL}/api/exchange/offers/`, {
           method: 'POST',
           headers: {
@@ -291,26 +292,41 @@ const ExchangeScreen: React.FC = () => {
           }),
         }),
       );
-      const optimisticOffer: ExchangeListing = {
-        id: `pending-${Date.now()}`,
-        username: 'You',
-        offeredCard: selectedOfferCard,
-        wants:
-          requestableCards.length === 0
-            ? `any ${rarityLabels[selectedOfferCard.rarity]} card`
-            : `any ${rarityLabels[selectedOfferCard.rarity]} card you still miss`,
-        requiredRarity: selectedOfferCard.rarity,
-        isOptimistic: true,
-      };
-      setOptimisticMyOffers(prev => [...prev, optimisticOffer]);
+      if (!response.ok) {
+        throw new Error(`Failed to publish exchange (${response.status})`);
+      }
+      const payload = (await response.json().catch(() => null)) as
+        | { match_result?: { matched?: boolean; partner_username?: string; received_card_name?: string } }
+        | null;
+
+      if (!payload?.match_result?.matched) {
+        const optimisticOffer: ExchangeListing = {
+          id: `pending-${Date.now()}`,
+          username: 'You',
+          offeredCard: selectedOfferCard,
+          wants:
+            missingCount === 0
+              ? `any ${rarityLabels[selectedOfferCard.rarity]} card`
+              : `any ${rarityLabels[selectedOfferCard.rarity]} card you still miss`,
+          requiredRarity: selectedOfferCard.rarity,
+          isOptimistic: true,
+        };
+        setOptimisticMyOffers(prev => [...prev, optimisticOffer]);
+      }
       setSelectedTradeKey(null);
-     await fetchCards({ silent: true });
-      const missingCount = requestableCards.length;
-      const summary =
-        missingCount > 0
-          ? `Your proposal will be visible to users who miss ${selectedOfferCard.name}. They can respond only with a duplicate ${rarityLabels[selectedOfferCard.rarity]} card you do not own (found ${missingCount} possible matches).`
-          : `Your proposal will be visible to users who miss ${selectedOfferCard.name}. You already own every ${rarityLabels[selectedOfferCard.rarity]} card, so you will be matched when new drops arrive.`;
-      Alert.alert('Exchange ready', summary);
+      await fetchCards({ silent: true });
+      if (payload?.match_result?.matched) {
+        Alert.alert(
+          'Scambio completato',
+          `Hai scambiato ${selectedOfferCard.name} con ${payload.match_result.partner_username} e hai ricevuto ${payload.match_result.received_card_name}.`,
+        );
+      } else {
+        const summary =
+          missingCount > 0
+            ? `Your proposal will be visible to users who miss ${selectedOfferCard.name}. They can respond only with a duplicate ${rarityLabels[selectedOfferCard.rarity]} card you do not own (found ${missingCount} possible matches).`
+            : `Your proposal will be visible to users who miss ${selectedOfferCard.name}. You already own every ${rarityLabels[selectedOfferCard.rarity]} card, so you will be matched when new drops arrive.`;
+        Alert.alert('Exchange ready', summary);
+      }
     } catch (err) {
       console.error('Unable to publish exchange offer', err);
       Alert.alert(
