@@ -1,4 +1,7 @@
+import logging
+
 from django.contrib.contenttypes.models import ContentType
+from django.db import DatabaseError
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import permissions, status
@@ -13,6 +16,9 @@ from .utils import (
     get_card_quantity_for_user,
     get_model_for_card_type,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 class BaseExchangeView(APIView):
@@ -127,10 +133,15 @@ class ExchangeOfferJoinView(BaseExchangeView):
 
 class ExchangeNotificationListView(BaseExchangeView):
     def get(self, request):
-        notifications = ExchangeNotification.objects.filter(
-            user=request.user,
-            is_read=False,
-        ).order_by('-created_at')
+        try:
+            notifications = ExchangeNotification.objects.filter(
+                user=request.user,
+                is_read=False,
+            ).order_by('-created_at')
+        except DatabaseError as exc:
+            logger.warning('Unable to read exchange notifications, returning empty list', exc_info=exc)
+            return Response([], status=status.HTTP_200_OK)
+
         serializer = ExchangeNotificationSerializer(notifications, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -140,5 +151,11 @@ class ExchangeNotificationReadView(BaseExchangeView):
         ids = request.data.get('ids')
         if not isinstance(ids, list) or not ids:
             return Response({'detail': 'Provide notification ids.'}, status=status.HTTP_400_BAD_REQUEST)
-        ExchangeNotification.objects.filter(user=request.user, pk__in=ids).update(is_read=True)
+
+        try:
+            ExchangeNotification.objects.filter(user=request.user, pk__in=ids).update(is_read=True)
+        except DatabaseError as exc:
+            logger.warning('Unable to mark exchange notifications as read', exc_info=exc)
+            return Response({'detail': 'Notifications unavailable at the moment.'}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
         return Response(status=status.HTTP_204_NO_CONTENT)
